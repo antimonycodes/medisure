@@ -7,7 +7,6 @@ import VerificationIcon from "@/shared/VerificationIcon";
 import QrScanner from "./QrScanner";
 import { useSearchParams } from "next/navigation";
 
-// Slider images array
 const sliderImages = [
   "/slider1.jpg",
   "/slider-2.jpg",
