@@ -1,5 +1,3 @@
-
-
 import axios from "axios";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
@@ -28,7 +26,7 @@ api.interceptors.request.use(
   (error) => {
     console.error(" Request interceptor error:", error);
     return Promise.reject(error);
-  }
+  },
 );
 
 api.interceptors.response.use(
@@ -51,7 +49,7 @@ api.interceptors.response.use(
       console.error("  Error:", error.message);
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export interface MintBatchPayload {
@@ -79,8 +77,47 @@ export interface DashboardStats {
     composition: string;
     expiry_date: string;
     status: string;
+    policy_id?: string;
+    asset_name?: string;
   }>;
 }
+
+export interface TransferBatchPayload {
+  batch_id: string;
+  from_wallet: string;
+  to_wallet: string;
+  tx_hash: string;
+  policy_id?: string;
+  asset_name?: string;
+}
+
+export interface PharmacyDashboardStats {
+  success: boolean;
+  total_inventory: number;
+  pending_transfers: number;
+  inventory: any[];
+  incoming: any[];
+}
+
+export interface ReceiveBatchPayload {
+  batch_id: string;
+  wallet_address: string;
+  price_per_unit: number;
+}
+
+export const transferBatchAPI = async (data: TransferBatchPayload) => {
+  console.log("=== transferBatchAPI FUNCTION CALLED ===");
+  console.log(" Payload:", JSON.stringify(data, null, 2));
+
+  try {
+    const response = await api.post("/transfer/", data);
+    console.log("SUCCESS! Response:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error(" transferBatchAPI ERROR:", error);
+    throw error;
+  }
+};
 
 export const mintBatchAPI = async (data: MintBatchPayload) => {
   console.log("=== mintBatchAPI FUNCTION CALLED ===");
@@ -108,15 +145,86 @@ export const getDashboardStats = async (manufacturerId: string) => {
 
   try {
     const response = await api.get<DashboardStats>(
-      `/dashboard/?manufacturer_id=${manufacturerId}`
+      `/dashboard/?manufacturer_id=${manufacturerId}`,
     );
     console.log("Dashboard stats received:", response.data);
     return response.data;
   } catch (error: any) {
     console.error(
       " Dashboard API Error:",
-      error.response?.data || error.message
+      error.response?.data || error.message,
     );
+    throw error;
+  }
+};
+
+export const getPharmacyDashboardStats = async (
+  walletAddress: string,
+): Promise<PharmacyDashboardStats> => {
+  try {
+    const response = await api.get("/pharmacy/dashboard/", {
+      params: { wallet_address: walletAddress },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const receiveBatchAPI = async (data: ReceiveBatchPayload) => {
+  try {
+    const response = await api.post("/pharmacy/receive/", data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const listMarketplaceDrugsAPI = async () => {
+  try {
+    const response = await api.get("/marketplace/");
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const addToCartAPI = async (
+  userId: number,
+  inventoryId: string,
+  quantity: number = 1,
+) => {
+  try {
+    const response = await api.post("/cart/add/", {
+      user_id: userId,
+      inventory_id: inventoryId,
+      quantity: quantity,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getCartAPI = async (userId: number) => {
+  try {
+    const response = await api.get("/cart/", {
+      params: { user_id: userId },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const createOrderAPI = async (userId: number, pharmacyId: string) => {
+  try {
+    const response = await api.post("/orders/create/", {
+      user_id: userId,
+      pharmacy_id: pharmacyId,
+    });
+    return response.data;
+  } catch (error) {
     throw error;
   }
 };

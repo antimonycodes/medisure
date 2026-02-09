@@ -6,6 +6,8 @@ export interface Batch {
   views?: number;
   medicine_name?: string;
   quantity?: string;
+  policy_id?: string;
+  asset_name?: string;
 }
 
 export interface FormData {
@@ -65,4 +67,5 @@ export interface User {
   role: string;
   username: string;
   entityId?: string;
+  name?: string;
 }

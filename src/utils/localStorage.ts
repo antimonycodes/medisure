@@ -10,7 +10,26 @@ export const getManufacturerId = (): string | null => {
   if (authUser) {
     try {
       const user: User = JSON.parse(authUser);
-      return user.entityId;
+      return user.entityId || null;
+    } catch (e) {
+      console.error("Error parsing auth_user from localStorage:", e);
+      return null;
+    }
+  }
+  return null;
+};
+
+/**
+ * Get the manufacturer name from localStorage
+ */
+export const getManufacturerName = (): string | null => {
+  if (typeof window === "undefined") return null;
+
+  const authUser = localStorage.getItem("auth_user");
+  if (authUser) {
+    try {
+      const user: User = JSON.parse(authUser);
+      return user.name || user.username || null;
     } catch (e) {
       console.error("Error parsing auth_user from localStorage:", e);
       return null;

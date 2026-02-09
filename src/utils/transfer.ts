@@ -5,7 +5,7 @@ export async function transferDrugBatch(
   wallet: MeshWallet,
   recipientAddress: string,
   policyId: string,
-  assetNameHex: string
+  assetNameHex: string,
 ) {
   console.log(" Starting Transfer...");
 
@@ -18,11 +18,11 @@ export async function transferDrugBatch(
   }
 
   // 2. Build Transaction
-  const txBuilder = new MeshTxBuilder({ fetcher: wallet.fetcher });
+  const txBuilder = new MeshTxBuilder({ fetcher: (wallet as any).fetcher });
 
   const tx = await txBuilder
     .txOut(recipientAddress, [
-      { unit: "lovelace", quantity: "20000" }, // Send 2 ADA (Min required to carry token)
+      { unit: "lovelace", quantity: "2000000" }, // Send 2 ADA (Min required to carry token)
       { unit: policyId + assetNameHex, quantity: "1" }, // The Token itself
     ])
     .changeAddress(changeAddress)

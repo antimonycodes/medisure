@@ -11,12 +11,13 @@ import {
 } from "lucide-react";
 import { CardanoWallet, useWallet } from "@meshsdk/react";
 import { MeshWallet, stringToHex } from "@meshsdk/core";
+import { toast } from "react-toastify";
 
 // Import all utilities from centralized index
 import { mintDrugBatch } from "@/utils/mint";
 import { transferDrugBatch } from "@/utils/transfer";
-import { mintBatchAPI, getDashboardStats } from "../../api";
-import { getManufacturerId } from "@/utils/localStorage";
+import { mintBatchAPI, getDashboardStats, transferBatchAPI } from "../../api";
+import { getManufacturerId, getManufacturerName } from "@/utils/localStorage";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import {
   MY_POLICY_ID,
@@ -80,7 +81,7 @@ const Overview = () => {
       setLoading(true);
       console.log(
         "📊 Fetching dashboard data for manufacturer:",
-        manufacturerId
+        manufacturerId,
       );
 
       const data = await getDashboardStats(manufacturerId);
@@ -95,6 +96,8 @@ const Overview = () => {
           status: batch.status as any,
           views: 0,
           medicine_name: batch.medicine_name,
+          policy_id: batch.policy_id,
+          asset_name: batch.asset_name,
         }));
 
         console.log("✅ Transformed batches:", transformedBatches);
@@ -104,7 +107,7 @@ const Overview = () => {
         const minted = new Set(
           transformedBatches
             .filter((b) => b.status === "Minted" || b.status === "In Transit")
-            .map((b) => b.id)
+            .map((b) => b.id),
         );
         setMintedBatchIds(minted);
         console.log("✅ Minted batch IDs:", Array.from(minted));
@@ -171,16 +174,15 @@ const Overview = () => {
         quantity: formData.quantity,
       };
 
-      const txHash = await mintDrugBatch(
+      const { txHash, policyId, assetNameHex } = await mintDrugBatch(
         wallet as unknown as MeshWallet,
-        batchData
+        batchData,
       );
       console.log("✅ Blockchain mint successful! TX:", txHash);
 
-      // Get wallet address and asset name
+      // Get wallet address
       const addresses = await wallet.getUsedAddresses();
       const manufacturerWallet = addresses[0];
-      const assetNameHex = stringToHex(batchId);
 
       // STEP 2: Backend API Call
       console.log("📍 STEP 2: Calling backend API...");
@@ -195,7 +197,7 @@ const Overview = () => {
           formData.manufactureDate || new Date().toISOString().split("T")[0],
         expiry_date: formData.expiryDate,
         quantity: formData.quantity || "0",
-        policy_id: MY_POLICY_ID,
+        policy_id: policyId,
         asset_name: assetNameHex,
         manufacturer_wallet: manufacturerWallet,
         tx_hash: txHash,
@@ -220,6 +222,8 @@ const Overview = () => {
         views: 0,
         medicine_name: formData.drugName,
         quantity: formData.quantity,
+        policy_id: policyId,
+        asset_name: assetNameHex,
       };
 
       setBatches([newBatch, ...batches]);
@@ -228,8 +232,8 @@ const Overview = () => {
       setStatus(
         `✅ Success! Batch minted and saved!\n\nBatch ID: ${batchId}\nTX: ${txHash.substring(
           0,
-          20
-        )}...`
+          20,
+        )}...`,
       );
       setShowSuccess(true);
 
@@ -286,7 +290,7 @@ const Overview = () => {
         `${process.env.NEXT_PUBLIC_BASE_URL}/health`,
         {
           method: "GET",
-        }
+        },
       );
       console.log("✅ Backend health check:", response.ok);
       return response.ok;
@@ -322,7 +326,7 @@ const Overview = () => {
       let totalLovelace = 0;
       utxos.forEach((utxo: any) => {
         const lovelace = utxo.output.amount.find(
-          (a: any) => a.unit === "lovelace"
+          (a: any) => a.unit === "lovelace",
         );
         if (lovelace) totalLovelace += parseInt(lovelace.quantity);
       });
@@ -330,22 +334,40 @@ const Overview = () => {
       const totalAda = totalLovelace / 1000000;
       if (totalAda < MIN_ADA_BALANCE) {
         throw new Error(
-          `${MESSAGES.INSUFFICIENT_FUNDS} You have: ${totalAda.toFixed(2)} ADA`
+          `${MESSAGES.INSUFFICIENT_FUNDS} You have: ${totalAda.toFixed(2)} ADA`,
         );
       }
 
-      const assetNameHex = stringToHex(selectedBatch.id);
+      console.log("📦 Transferring Batch Data:", selectedBatch);
+
+      const assetNameString =
+        "Batch" + selectedBatch.id.replace(/[^a-zA-Z0-9]/g, "");
+      const assetNameHexFallback = stringToHex(assetNameString);
+
+      // Determine actual Asset Name to use
+      let actualAssetNameHex = selectedBatch.asset_name || assetNameHexFallback;
+
+      // Heuristic: If it doesn't start with "Batch" hex (4261746368), and it's just the ID hex, try prefixing
+      if (actualAssetNameHex === stringToHex(selectedBatch.id)) {
+        actualAssetNameHex = assetNameHexFallback;
+      }
+
+      // Hardcode priority for the known correct policy for existing batches
+      const policyIdToUse = MY_POLICY_ID;
+
+      console.log(`🎯 Targeted Asset: ${policyIdToUse}${actualAssetNameHex}`);
+
       const hash = await transferDrugBatch(
-        wallet as unknown as MeshWallet,
+        wallet as any,
         recipientAddress,
-        MY_POLICY_ID,
-        assetNameHex
+        policyIdToUse,
+        actualAssetNameHex,
       );
 
       setBatches((prev) =>
         prev.map((b) =>
-          b.id === selectedBatch.id ? { ...b, status: "In Transit" } : b
-        )
+          b.id === selectedBatch.id ? { ...b, status: "In Transit" } : b,
+        ),
       );
 
       setMintedBatchIds((prev) => {
@@ -355,8 +377,25 @@ const Overview = () => {
       });
 
       setStatus(
-        `${MESSAGES.TRANSFER_SUCCESS}\nTx: ${hash.substring(0, 20)}...`
+        `${MESSAGES.TRANSFER_SUCCESS}\nTx: ${hash.substring(0, 20)}...`,
       );
+      // Sync with backend
+      setStatus("⏳ Syncing with backend...");
+      const fromWallet = await wallet.getChangeAddress();
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 20000));
+        await transferBatchAPI({
+          batch_id: selectedBatch.id,
+          from_wallet: fromWallet,
+          to_wallet: recipientAddress,
+          tx_hash: hash,
+          policy_id: policyIdToUse,
+          asset_name: actualAssetNameHex,
+        });
+        toast.success("Transfer recorded in database!");
+      } catch (e) {
+        console.error("Backend sync failed:", e);
+      }
       await checkBalance();
 
       setTimeout(async () => {
@@ -444,7 +483,7 @@ const Overview = () => {
               type="warning"
               title="Low Balance Warning"
               message={`You have ${walletBalance.toFixed(
-                2
+                2,
               )} ADA but need at least ${MIN_ADA_BALANCE} ADA to transfer NFTs.`}
               link={{
                 text: "Get Test ADA from Faucet",
@@ -493,8 +532,8 @@ const Overview = () => {
                     status.includes("✅")
                       ? "success"
                       : status.includes("❌")
-                      ? "error"
-                      : "info"
+                        ? "error"
+                        : "info"
                   }
                   message={status}
                 />

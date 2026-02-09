@@ -53,7 +53,7 @@ export async function mintDrugBatch(wallet: MeshWallet, data: DrugBatchData) {
   };
 
   // 5. Build Transaction
-  const txBuilder = new MeshTxBuilder({ fetcher: wallet.fetcher });
+  const txBuilder = new MeshTxBuilder({ fetcher: (wallet as any).fetcher });
 
   // Convert Name to Hex
   const assetNameString = "Batch" + data.batchId.replace(/[^a-zA-Z0-9]/g, "");
@@ -75,5 +75,9 @@ export async function mintDrugBatch(wallet: MeshWallet, data: DrugBatchData) {
   const signedTx = await wallet.signTx(tx);
   const txHash = await wallet.submitTx(signedTx);
 
-  return txHash;
+  return {
+    txHash,
+    policyId,
+    assetNameHex,
+  };
 }

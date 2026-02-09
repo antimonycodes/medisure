@@ -31,7 +31,7 @@ const Navbar = () => {
     { name: "How it works", link: "/#how-it-works" },
     { name: "About us", link: "/about" },
     { name: "Login", link: "/signin" },
-    { name: "Shop Now", link: "/upload-prescriptions", isButton: true },
+    { name: "Shop Now", link: "/patient/dashboard", isButton: true },
   ];
 
   const NavLink = ({
@@ -89,8 +89,12 @@ const Navbar = () => {
             {/* Logo */}
             <Link href="/" className="flex items-center shrink-0">
               <div className="w-12 h-12 md:w-16 md:h-16 relative">
-                 {/* Using img tag for simplicity as verified in public folder. Next/Image requires width/height or fill */}
-                <img src="/logo.png" alt="MediSure Logo" className="w-full h-full object-contain" />
+                {/* Using img tag for simplicity as verified in public folder. Next/Image requires width/height or fill */}
+                <img
+                  src="/logo.png"
+                  alt="MediSure Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <span className="ml-3 text-xl md:text-2xl font-bold text-gray-800 hidden sm:block">
                 MediSure
@@ -165,7 +169,7 @@ const Navbar = () => {
       )}
 
       {/* Spacer to prevent content from going under fixed navbar */}
-      <div className="h-16 md:h-20" /> 
+      <div className="h-16 md:h-20" />
     </>
   );
 };

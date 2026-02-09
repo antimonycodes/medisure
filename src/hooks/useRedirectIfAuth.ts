@@ -11,7 +11,7 @@ export const useRedirectIfAuth = () => {
   useEffect(() => {
     if (user) {
       const routes: Record<string, string> = {
-        patient: "/",
+        patient: "/patient/dashboard",
         distributor: "/distributor/dashboard",
         pharmacy: "/pharmacy/dashboard",
         manufacturer: "/manufacturer/dashboard",

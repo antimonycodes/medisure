@@ -27,7 +27,7 @@ const SignIn = () => {
         {
           username,
           password,
-        }
+        },
       );
 
       const {
@@ -36,8 +36,9 @@ const SignIn = () => {
         username: userUsername,
         role,
         entity_id,
+        name,
       } = res.data;
-      login(token, user_id, userUsername, role, entity_id);
+      login(token, user_id, userUsername, role, entity_id, name);
       toast.success("Login successful!");
     } catch (err: any) {
       console.log(err);

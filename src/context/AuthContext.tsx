@@ -9,6 +9,7 @@ interface User {
   role: string;
   username: string;
   entityId?: string;
+  name?: string;
 }
 
 interface AuthContextType {
@@ -19,7 +20,8 @@ interface AuthContextType {
     userId: string,
     username: string,
     role: string,
-    entityId: string
+    entityId: string,
+    name: string,
   ) => void;
   logout: () => void;
 }
@@ -49,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const redirectByRole = (role: string) => {
     const routes: Record<string, string> = {
-      patient: "/",
+      patient: "/patient/dashboard",
       distributor: "/distributor/dashboard",
       pharmacy: "/pharmacy/dashboard",
       manufacturer: "/manufacturer/dashboard",
@@ -64,7 +66,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     userId: string,
     username: string,
     role: string,
-    entityId: string
+    entityId: string,
+    name: string,
   ) => {
     setToken(token);
 
@@ -73,6 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       role: role.toLowerCase(),
       username: username,
       entityId: entityId,
+      name: name,
     };
 
     setUser(userData);

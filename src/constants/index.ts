@@ -4,7 +4,7 @@
 
 // Cardano Policy ID for NFTs
 export const MY_POLICY_ID =
-  "dea909d9658e872bd9827cafda7a5d415c753a9ff3310a3f59dad227";
+  "3f6640eee9b80108c65682bc953948e4e0aa157350376b31714fa621";
 
 // Minimum ADA required for transactions
 export const MIN_ADA_BALANCE = 3;
