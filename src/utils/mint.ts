@@ -1,6 +1,4 @@
-import { MeshTxBuilder, ForgeScript, AssetMetadata } from "@meshsdk/core";
-import { MeshWallet } from "@meshsdk/core";
-import { stringToHex, resolveScriptHash } from "@meshsdk/core"; // 1. Using 'resolveScriptHash'
+import type { MeshWallet } from "@meshsdk/core";
 
 export interface DrugBatchData {
   drugName: string;
@@ -11,6 +9,9 @@ export interface DrugBatchData {
 }
 
 export async function mintDrugBatch(wallet: MeshWallet, data: DrugBatchData) {
+  const { MeshTxBuilder, ForgeScript, stringToHex, resolveScriptHash } =
+    await import("@meshsdk/core");
+
   console.log(" Starting Mint Process...");
 
   // 1. Get Wallet Address
@@ -38,7 +39,7 @@ export async function mintDrugBatch(wallet: MeshWallet, data: DrugBatchData) {
   }
 
   // 4. Create Metadata
-  const assetMetadata: AssetMetadata = {
+  const assetMetadata = {
     name: "MediSure-" + data.drugName.replace(/\s/g, ""),
     image: "ipfs://QmRzicpSO...",
     mediaType: "image/jpg",

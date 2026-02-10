@@ -1,36 +1,66 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import BatchDetailsPage from "../../components/manufacturer/BatchDetails";
+import { useRequireRole } from "@/hooks/useRequireRole";
+import { ROLES } from "@/constants/roles";
+import { getBatchDetailsByBatchId } from "@/api";
+
+type BatchDetailsData = {
+  batch_id: string;
+  qr_code: string;
+  medicine_name: string;
+  composition: string;
+  expiry_date: string;
+  manufacture_date: string;
+  quantity: string;
+  tx_hash: string;
+  policy_id: string;
+  asset_name: string;
+  status?: "Pending" | "Minted" | "In Transit";
+};
 
 export default function BatchDetails() {
+  useRequireRole([ROLES.MANUFACTURER]);
   const router = useRouter();
-  const [batchData, setBatchData] = useState<any>(null);
+  const [batchData, setBatchData] = useState<BatchDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get batch details from localStorage
-    const storedData = localStorage.getItem("currentBatchDetails");
+    const load = async () => {
+      const storedData = localStorage.getItem("currentBatchDetails");
 
-    if (storedData) {
-      try {
-        const data = JSON.parse(storedData);
-        setBatchData(data);
-        setLoading(false);
-
-        // Clear from localStorage after loading
-        // (optional - remove this if you want to keep it)
-        // localStorage.removeItem("currentBatchDetails");
-      } catch (error) {
-        console.error("Error parsing batch data:", error);
-        router.push("/manufacturer/dashboard");
+      if (storedData) {
+        try {
+          const data = JSON.parse(storedData);
+          setBatchData(data);
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.error("Error parsing batch data:", error);
+        }
       }
-    } else {
-      // No data found, redirect to dashboard
+
+      const batchId = router.query.batchId;
+      if (typeof batchId === "string" && batchId.trim()) {
+        try {
+          const details = await getBatchDetailsByBatchId(batchId);
+          setBatchData(details);
+          localStorage.setItem("currentBatchDetails", JSON.stringify(details));
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.error("Error loading batch details from backend:", error);
+        }
+      }
+
       router.push("/manufacturer/dashboard");
-    }
-  }, [router]);
+    };
+
+    if (!router.isReady) return;
+    load();
+  }, [router, router.isReady, router.query.batchId]);
 
   if (loading) {
     return (

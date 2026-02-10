@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { CheckCircle, History, Scan } from "lucide-react";
+import Image from "next/image";
 
 import scan from "../../../public/Containerscan-code.png";
 import verify from "../../../public/Containerverify-history.png";
@@ -9,7 +10,6 @@ const HowItWork = () => {
   const cards = [
     {
       id: 1,
-      image: scan,
       title: "Scan Code",
       icon: <Scan className="w-8 h-8 text-primary-faint" />,
       description:
@@ -17,7 +17,6 @@ const HowItWork = () => {
     },
     {
       id: 2,
-      image: verify,
       title: "View History",
       icon: <History className="w-8 h-8 text-primary-faint" />,
       description:
@@ -25,7 +24,6 @@ const HowItWork = () => {
     },
     {
       id: 3,
-      image: confirm,
       title: "Confirm Authenticity",
       icon: <CheckCircle className="w-8 h-8 text-primary-faint" />,
       description:
@@ -34,7 +32,7 @@ const HowItWork = () => {
   ];
 
   return (
-    <div className="relative bg-[#F8FAFC] pt-24 pb-32 overflow-hidden">
+    <div id="how-it-works" className="relative bg-[#F8FAFC] pt-24 pb-32 overflow-hidden">
       {/* Curved Top Background */}
       <div className="absolute top-0 left-0 w-full overflow-hidden leading-0">
         <svg
@@ -50,7 +48,7 @@ const HowItWork = () => {
       </div>
 
       {/* Section Content */}
-      <div className="px-6 md:px-12">
+      <div className="px-6 md:px-12 max-w-7xl mx-auto">
         <div className="text-center space-y-3 relative z-10">
           <h1 className="text-[#101828] text-3xl md:text-4xl font-semibold">
             How It Works
@@ -62,7 +60,7 @@ const HowItWork = () => {
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mt-16 max-w-6xl mx-auto relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 max-w-6xl mx-auto relative z-10">
           {cards.map((card, index) => (
             <motion.div
               key={card.id}
@@ -70,18 +68,20 @@ const HowItWork = () => {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: index * 0.2 }}
               viewport={{ once: true }}
-              className="bg-white p-8 rounded-2xl shadow-lg border border-[#E5E7EB] text-center flex flex-col items-center hover:shadow-xl transition-all"
+              className="bg-white p-7 rounded-2xl shadow-sm border border-[#E5E7EB] text-center flex flex-col items-center hover:shadow-md transition-all"
             >
               {/* Step Indicator */}
               <div className="w-12 h-12 flex items-center justify-center bg-primary-faint/10 rounded-full mb-4">
                 {card.icon}
               </div>
 
-              {/* <img
-                src={card.image}
-                alt={card.title}
-                className="w-24 h-24 object-contain mb-4"
-              /> */}
+              <div className="w-full h-40 rounded-xl bg-[#EFF6FF] border border-blue-100 flex items-center justify-center mb-5 overflow-hidden">
+                <Image
+                  src={card.image}
+                  alt={card.title}
+                  className="w-24 h-24 object-contain"
+                />
+              </div>
 
               <h2 className="text-[#101828] text-xl font-semibold mb-2">
                 {card.id}. {card.title}

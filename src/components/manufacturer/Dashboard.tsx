@@ -10,7 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { CardanoWallet, useWallet } from "@meshsdk/react";
-import { MeshWallet, stringToHex } from "@meshsdk/core";
+import type { MeshWallet } from "@meshsdk/core";
 
 // Import all utilities from centralized index
 import { mintDrugBatch } from "@/utils/mint";
@@ -79,12 +79,12 @@ const Overview = () => {
     try {
       setLoading(true);
       console.log(
-        "📊 Fetching dashboard data for manufacturer:",
+        "Fetching dashboard data for manufacturer:",
         manufacturerId
       );
 
       const data = await getDashboardStats(manufacturerId);
-      console.log("📊 Dashboard data received:", data);
+      console.log("Dashboard data received:", data);
 
       if (data.success) {
         // Transform backend data to match frontend format
@@ -97,7 +97,7 @@ const Overview = () => {
           medicine_name: batch.medicine_name,
         }));
 
-        console.log("✅ Transformed batches:", transformedBatches);
+        console.log("Transformed batches:", transformedBatches);
         setBatches(transformedBatches);
 
         // Track minted batches
@@ -107,10 +107,10 @@ const Overview = () => {
             .map((b) => b.id)
         );
         setMintedBatchIds(minted);
-        console.log("✅ Minted batch IDs:", Array.from(minted));
+        console.log("Minted batch IDs:", Array.from(minted));
       }
     } catch (error: any) {
-      console.error("❌ Error fetching dashboard data:", error);
+      console.error("Error fetching dashboard data:", error);
       setStatus("Failed to load dashboard data from backend");
     } finally {
       setLoading(false);
@@ -130,7 +130,7 @@ const Overview = () => {
   // This version has proper async/await flow and will definitely call the backend
 
   const handleSubmit = async () => {
-    console.log("🚀 === SUBMIT STARTED ===");
+    console.log("[submit] started");
 
     if (!connected) {
       setStatus(MESSAGES.CONNECT_WALLET);
@@ -139,7 +139,7 @@ const Overview = () => {
 
     const manufacturerId = getManufacturerId();
     if (!manufacturerId) {
-      setStatus("❌ Manufacturer ID not found. Please log in again.");
+      setStatus("Manufacturer ID not found. Please log in again.");
       return;
     }
 
@@ -149,16 +149,16 @@ const Overview = () => {
       !formData.chemicalComposition ||
       !formData.expiryDate
     ) {
-      setStatus("❌ Please fill in all required fields");
+      setStatus("Please fill in all required fields.");
       return;
     }
 
-    setStatus("⏳ Step 1/3: Minting on blockchain...");
+    setStatus("Step 1/3: Minting on blockchain...");
     setShowSuccess(false);
 
     try {
       // STEP 1: Blockchain Mint
-      console.log("📍 STEP 1: Starting blockchain mint...");
+      console.log("[submit] step 1: minting on blockchain");
 
       const batchId =
         formData.batchId || "BATCH-" + Math.floor(Math.random() * 10000);
@@ -175,16 +175,17 @@ const Overview = () => {
         wallet as unknown as MeshWallet,
         batchData
       );
-      console.log("✅ Blockchain mint successful! TX:", txHash);
+      console.log("[submit] blockchain mint successful. TX:", txHash);
 
       // Get wallet address and asset name
       const addresses = await wallet.getUsedAddresses();
       const manufacturerWallet = addresses[0];
+      const { stringToHex } = await import("@meshsdk/core");
       const assetNameHex = stringToHex(batchId);
 
       // STEP 2: Backend API Call
-      console.log("📍 STEP 2: Calling backend API...");
-      setStatus("⏳ Step 2/3: Saving to database...");
+      console.log("[submit] step 2: calling backend API");
+      setStatus("Step 2/3: Saving to database...");
 
       const backendPayload = {
         batch_id: batchId,
@@ -201,16 +202,16 @@ const Overview = () => {
         tx_hash: txHash,
       };
 
-      console.log("📤 Sending to backend:", backendPayload);
+      console.log("[submit] sending to backend:", backendPayload);
 
       // THIS IS THE CRITICAL LINE - Make sure this actually executes
       const backendResponse = await mintBatchAPI(backendPayload);
 
-      console.log("✅ Backend save successful!", backendResponse);
+      console.log("[submit] backend save successful", backendResponse);
 
       // STEP 3: Update UI
-      console.log("📍 STEP 3: Updating local state...");
-      setStatus("⏳ Step 3/3: Updating dashboard...");
+      console.log("[submit] step 3: updating local state");
+      setStatus("Step 3/3: Updating dashboard...");
 
       const newBatch: Batch = {
         id: batchId,
@@ -226,7 +227,7 @@ const Overview = () => {
       setMintedBatchIds((prev) => new Set(prev).add(batchId));
 
       setStatus(
-        `✅ Success! Batch minted and saved!\n\nBatch ID: ${batchId}\nTX: ${txHash.substring(
+        `Success. Batch minted and saved.\n\nBatch ID: ${batchId}\nTX: ${txHash.substring(
           0,
           20
         )}...`
@@ -234,11 +235,11 @@ const Overview = () => {
       setShowSuccess(true);
 
       // STEP 4: Refresh dashboard
-      console.log("📍 STEP 4: Refreshing dashboard...");
+      console.log("[submit] step 4: refreshing dashboard");
       await fetchDashboardData();
 
       // STEP 5: Close modal after delay
-      console.log("📍 STEP 5: Closing modal in 2 seconds...");
+      console.log("[submit] step 5: closing modal in 2 seconds");
       setTimeout(() => {
         setShowSuccess(false);
         setShowModal(false);
@@ -254,12 +255,12 @@ const Overview = () => {
         setStatus("");
       }, 2000);
 
-      console.log("✅ === SUBMIT COMPLETED ===");
+      console.log("[submit] completed");
     } catch (error: any) {
-      console.error("❌ === ERROR CAUGHT ===");
+      console.error("[submit] error caught");
       console.error("Full error:", error);
 
-      let errorMessage = "❌ Error: ";
+      let errorMessage = "Error: ";
 
       if (error.response) {
         console.error("Backend error response:", error.response.data);
@@ -281,17 +282,17 @@ const Overview = () => {
   // Also add this helper function to check if API is reachable
   const checkBackendHealth = async () => {
     try {
-      console.log("🏥 Checking backend health...");
+      console.log("[health] checking backend status");
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BASE_URL}/health`,
         {
           method: "GET",
         }
       );
-      console.log("✅ Backend health check:", response.ok);
+      console.log("[health] backend check:", response.ok);
       return response.ok;
     } catch (error) {
-      console.error("❌ Backend health check failed:", error);
+      console.error("[health] backend check failed:", error);
       return false;
     }
   };
@@ -313,7 +314,7 @@ const Overview = () => {
     }
 
     setTransferring(true);
-    setStatus("⏳ Checking wallet balance...");
+    setStatus("Checking wallet balance...");
 
     try {
       const utxos = await wallet.getUtxos();
@@ -334,6 +335,7 @@ const Overview = () => {
         );
       }
 
+      const { stringToHex } = await import("@meshsdk/core");
       const assetNameHex = stringToHex(selectedBatch.id);
       const hash = await transferDrugBatch(
         wallet as unknown as MeshWallet,
@@ -369,7 +371,7 @@ const Overview = () => {
       }, 3000);
     } catch (error: any) {
       console.error("Transfer error:", error);
-      setStatus(`❌ Transfer Failed: ${error.message}`);
+      setStatus(`Transfer failed: ${error.message}`);
       setTransferring(false);
     }
   };
@@ -490,9 +492,9 @@ const Overview = () => {
               <div className="mb-8">
                 <AlertMessage
                   type={
-                    status.includes("✅")
+                    status.startsWith("Success")
                       ? "success"
-                      : status.includes("❌")
+                      : status.startsWith("Error") || status.startsWith("Transfer failed")
                       ? "error"
                       : "info"
                   }

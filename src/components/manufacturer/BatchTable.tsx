@@ -1,12 +1,10 @@
 import React from "react";
-import { Eye, Send, Calendar, Package, Plus } from "lucide-react";
+import { Eye, Calendar, Package, Plus } from "lucide-react";
 import { Batch } from "@/utils/types";
 
 interface BatchTableProps {
   batches: Batch[];
-  mintedBatchIds: Set<string>;
   onViewBatch: (batch: Batch) => void;
-  onTransferBatch: (batch: Batch) => void;
   onCreateBatch: () => void;
 }
 
@@ -29,27 +27,25 @@ const getStatusColor = (status: string) => {
 
 const BatchTable: React.FC<BatchTableProps> = ({
   batches,
-  mintedBatchIds,
   onViewBatch,
-  onTransferBatch,
   onCreateBatch,
 }) => {
   if (batches.length === 0) {
     return (
-      <div className="text-center py-12">
-        <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-600 mb-2">
-          No Batches Yet
+      <div className="text-center py-14">
+        <Package className="w-14 h-14 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-gray-700 mb-2">
+          No batches yet
         </h3>
-        <p className="text-gray-500 mb-6">
-          Create your first batch to get started
+        <p className="text-gray-500 mb-6 max-w-md mx-auto">
+          Create your first medicine batch to start tracking on the blockchain.
         </p>
         <button
           onClick={onCreateBatch}
-          className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
         >
           <Plus className="w-5 h-5 mr-2" />
-          Create First Batch
+          Create Batch
         </button>
       </div>
     );
@@ -57,88 +53,61 @@ const BatchTable: React.FC<BatchTableProps> = ({
 
   return (
     <table className="w-full">
-      <thead className="bg-gray-50/80">
+      <thead className="bg-gray-50">
         <tr>
-          <th className="px-6 py-4 text-left text-gray-700 text-xs font-bold uppercase tracking-wider">
+          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wide">
             Batch ID
           </th>
-          <th className="px-6 py-4 text-left text-gray-700 text-xs font-bold uppercase tracking-wider">
+          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wide">
             Composition
           </th>
-          <th className="px-6 py-4 text-left text-gray-700 text-xs font-bold uppercase tracking-wider">
+          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wide">
             Expiry Date
           </th>
-          <th className="px-6 py-4 text-left text-gray-700 text-xs font-bold uppercase tracking-wider">
+          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wide">
             Status
           </th>
-          <th className="px-6 py-4 text-left text-gray-700 text-xs font-bold uppercase tracking-wider">
+          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wide">
             Actions
           </th>
         </tr>
       </thead>
-      <tbody className="bg-white divide-y divide-gray-100">
-        {batches.map((batch, index) => (
-          <tr
-            key={batch.id}
-            className="hover:bg-blue-50/30 transition-colors duration-150 group"
-            style={{
-              animation: `slideIn 0.3s ease-out ${index * 0.1}s both`,
-            }}
-          >
-            <td className="px-6 py-4 whitespace-nowrap">
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3 group-hover:animate-pulse"></div>
-                <span className="text-sm font-bold text-gray-900">
-                  {batch.id}
-                </span>
-              </div>
+      <tbody className="bg-white divide-y divide-gray-200">
+        {batches.map((batch) => (
+          <tr key={batch.id} className="hover:bg-gray-50 transition-colors">
+            <td className="px-6 py-5 whitespace-nowrap">
+              <span className="text-base font-semibold text-gray-900">
+                {batch.id}
+              </span>
             </td>
-            <td className="px-6 py-4">
-              <span className="text-sm text-gray-700">{batch.composition}</span>
+            <td className="px-6 py-5">
+              <span className="text-base text-gray-700">
+                {batch.composition}
+              </span>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">
-              <span className="text-sm text-gray-700 flex items-center">
+            <td className="px-6 py-5 whitespace-nowrap">
+              <span className="text-base text-gray-700 flex items-center">
                 <Calendar className="w-4 h-4 mr-2 text-gray-400" />
                 {batch.expiryDate}
               </span>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">
+            <td className="px-6 py-5 whitespace-nowrap">
               <span
-                className={`px-3 py-1.5 inline-flex text-xs font-semibold rounded-full border ${getStatusColor(
+                className={`px-3 py-1.5 inline-flex text-sm font-medium rounded-full border ${getStatusColor(
                   batch.status
                 )}`}
               >
                 {batch.status}
               </span>
             </td>
-
-            <td className="px-6 py-4 whitespace-nowrap">
-              <div className="flex items-center space-x-2">
-                <button
-                  className="flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                  onClick={() => onViewBatch(batch)}
-                >
-                  <Eye className="w-4 h-4 mr-1.5" />
-                  View
-                </button>
-                <button
-                  onClick={() => onTransferBatch(batch)}
-                  disabled={!mintedBatchIds.has(batch.id)}
-                  className={`flex items-center text-sm font-medium transition-colors ${
-                    mintedBatchIds.has(batch.id)
-                      ? "text-purple-600 hover:text-purple-700 cursor-pointer"
-                      : "text-gray-400 cursor-not-allowed"
-                  }`}
-                  title={
-                    mintedBatchIds.has(batch.id)
-                      ? "Transfer batch"
-                      : "Only minted batches can be transferred"
-                  }
-                >
-                  <Send className="w-4 h-4 mr-1.5" />
-                  Transfer
-                </button>
-              </div>
+            <td className="px-6 py-5 whitespace-nowrap">
+              <button
+                className="flex items-center text-sm font-medium text-gray-900 hover:text-blue-700 transition-colors"
+                onClick={() => onViewBatch(batch)}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                View Details
+              </button>
             </td>
           </tr>
         ))}

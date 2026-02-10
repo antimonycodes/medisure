@@ -1,88 +1,111 @@
 import "@/styles/globals.css";
-import "@meshsdk/react/styles.css";
 import type { AppProps } from "next/app";
-import { MeshProvider } from "@meshsdk/react";
 import { useEffect } from "react";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastContainer } from "react-toastify";
+import { WALLET_FEATURES_ENABLED } from "@/utils/walletMode";
 
 export default function App({ Component, pageProps }: AppProps) {
-  // Fix for Eternal wallet errors
+  // Runtime guards for wallet SDK integration (kept for compatibility)
   useEffect(() => {
-    window.addEventListener("error", (e) => {
-      console.log("Window error:", e.error);
-    });
-    window.addEventListener("unhandledrejection", (e) => {
-      console.log("Unhandled promise:", e.reason);
-    });
-
-    // Suppress wallet-related errors that are safe to ignore
+    let isMounted = true;
     const originalError = console.error;
+
+    // Pre-initialize libsodium to avoid intermittent wallet runtime crashes.
+    const initSodium = async () => {
+      try {
+        const sodium = await import("libsodium-wrappers-sumo");
+        await sodium.ready;
+      } catch (error) {
+        if (isMounted) {
+          console.warn("libsodium initialization skipped:", error);
+        }
+      }
+    };
+    initSodium();
+
+    const onWindowError = (event: ErrorEvent) => {
+      const message = `${event.message || ""} ${event.error || ""}`;
+      if (message.includes("libsodium was not correctly initialized")) {
+        event.preventDefault();
+      }
+    };
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = `${event.reason || ""}`;
+      if (reason.includes("libsodium was not correctly initialized")) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("error", onWindowError);
+    window.addEventListener("unhandledrejection", onUnhandledRejection);
+
+    // Suppress wallet-related noise that is handled internally by Mesh SDK.
     console.error = (...args: any[]) => {
       const errorString = args[0]?.toString?.() || "";
       if (
         errorString.includes("invalidated") ||
         errorString.includes("postMessage") ||
         errorString.includes("account changed") ||
-        errorString.includes("account_changed")
+        errorString.includes("account_changed") ||
+        errorString.includes("libsodium was not correctly initialized")
       ) {
-        // Silently ignore these specific errors - they're handled by Mesh
         return;
       }
       originalError.apply(console, args);
     };
 
     // Patch postMessage to handle cloning issues
-    if (typeof window !== "undefined") {
-      const originalPostMessage = window.postMessage.bind(window);
+    const originalPostMessage = window.postMessage.bind(window);
 
-      // @ts-ignore
-      window.postMessage = function (
-        message: any,
-        targetOrigin: string,
-        transfer?: any
-      ) {
+    // @ts-expect-error override browser postMessage wrapper signature for safety patch
+    window.postMessage = function (
+      message: any,
+      targetOrigin: string,
+      transfer?: any
+    ) {
+      try {
+        if (typeof message === "object" && message !== null) {
+          const safeMessage = JSON.parse(JSON.stringify(message));
+          originalPostMessage(safeMessage, targetOrigin, transfer);
+        } else {
+          originalPostMessage(message, targetOrigin, transfer);
+        }
+      } catch {
         try {
-          // Try to clone the message safely
-          if (typeof message === "object" && message !== null) {
-            const safeMessage = JSON.parse(JSON.stringify(message));
-            originalPostMessage(safeMessage, targetOrigin, transfer);
-          } else {
-            originalPostMessage(message, targetOrigin, transfer);
-          }
-        } catch (error) {
-          // If cloning fails, try original message
-          try {
-            originalPostMessage(message, targetOrigin, transfer);
-          } catch (fallbackError) {
-            // Silently fail - this prevents the error from showing
-          }
+          originalPostMessage(message, targetOrigin, transfer);
+        } catch {
+          return;
         }
-      };
+      }
+    };
 
-      // Handle account change events from wallet
-      window.addEventListener("message", (event) => {
-        if (
-          event.data?.type === "account_changed" ||
-          event.data?.type === "accountChanged"
-        ) {
-          // Account changed - this is normal, just refresh the connection state
-          console.log("Wallet account changed - connection maintained");
-        }
-      });
-    }
+    const onWalletMessage = (event: MessageEvent) => {
+      if (
+        event.data?.type === "account_changed" ||
+        event.data?.type === "accountChanged"
+      ) {
+        return;
+      }
+    };
+    window.addEventListener("message", onWalletMessage);
 
     return () => {
+      isMounted = false;
+      window.removeEventListener("error", onWindowError);
+      window.removeEventListener("unhandledrejection", onUnhandledRejection);
+      window.removeEventListener("message", onWalletMessage);
+      window.postMessage = originalPostMessage as any;
       console.error = originalError;
     };
   }, []);
 
   return (
     <AuthProvider>
-      <MeshProvider>
-        <ToastContainer position="top-right" autoClose={3000} theme="colored" />
-        <Component {...pageProps} />
-      </MeshProvider>
+      {!WALLET_FEATURES_ENABLED && null}
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+      <Component {...pageProps} />
     </AuthProvider>
   );
 }

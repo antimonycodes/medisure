@@ -24,6 +24,7 @@ interface CreateBatchModalProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: () => void;
   showSuccess: boolean;
+  submitting?: boolean;
 }
 
 const CreateBatchModal = ({
@@ -32,6 +33,7 @@ const CreateBatchModal = ({
   handleInputChange,
   handleSubmit,
   showSuccess,
+  submitting = false,
 }: CreateBatchModalProps) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center h-screen z-50 px-4 backdrop-blur-sm animate-fadeIn">
@@ -199,10 +201,20 @@ const CreateBatchModal = ({
             </p>
             <button
               onClick={handleSubmit}
-              className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center"
+              disabled={submitting}
+              className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
             >
-              <Package className="w-5 h-5 mr-2" />
-              Mint Batch
+              {submitting ? (
+                <>
+                  <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+                  Minting...
+                </>
+              ) : (
+                <>
+                  <Package className="w-5 h-5 mr-2" />
+                  Mint Batch
+                </>
+              )}
             </button>
           </div>
         </div>

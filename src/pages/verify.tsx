@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AlertTriangle, CheckCircle2, Pill, Factory } from "lucide-react";
 
 export default function VerifyPage() {
   const [input, setInput] = useState("");
@@ -106,7 +107,9 @@ export default function VerifyPage() {
           >
             {result.isValid ? (
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "50px", marginBottom: "10px" }}>✅</div>
+                <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+                  <CheckCircle2 size={50} color="#10b981" />
+                </div>
                 <h2 style={{ color: "#065f46", margin: "0 0 10px 0" }}>
                   Verified Authentic
                 </h2>
@@ -118,22 +121,32 @@ export default function VerifyPage() {
                   }}
                 >
                   <p>
-                    <strong>💊 Drug:</strong> {result.drugName}
+                    <strong>
+                      <Pill size={14} style={{ display: "inline", marginRight: "4px" }} />
+                      Drug:
+                    </strong>{" "}
+                    {result.drugName}
                   </p>
                   <p>
-                    <strong>🏭 Manufacturer:</strong> {result.manufacturer}
+                    <strong>
+                      <Factory size={14} style={{ display: "inline", marginRight: "4px" }} />
+                      Manufacturer:
+                    </strong>{" "}
+                    {result.manufacturer}
                   </p>
                   <p>
-                    <strong>📦 Batch ID:</strong> {result.batchId}
+                    <strong>Batch ID:</strong> {result.batchId}
                   </p>
                   <p>
-                    <strong>📅 Expiry:</strong> {result.expiry}
+                    <strong>Expiry:</strong> {result.expiry}
                   </p>
                 </div>
               </div>
             ) : (
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "50px", marginBottom: "10px" }}>⚠️</div>
+                <div style={{ marginBottom: "10px", display: "flex", justifyContent: "center" }}>
+                  <AlertTriangle size={50} color="#ef4444" />
+                </div>
                 <h2 style={{ color: "#991b1b" }}>Warning: Not Found</h2>
                 <p style={{ color: "#7f1d1d" }}>
                   This product ID does not exist on the blockchain. It may be

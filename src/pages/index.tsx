@@ -1,20 +1,15 @@
 import Navbar from "@/components/Navbar";
-import Head from "next/head";
-import { CardanoWallet, MeshBadge } from "@meshsdk/react";
-import { useState } from "react";
-import HowItWork from "@/components/Home/HowItWork";
 import Hero from "@/components/Home/Hero";
-// import Hero from "@/components/Home/Hero";
-// import HowItWork fro@/components/Home/HowItWorkork";
+import HomeHighlights from "@/components/Home/HomeHighlights";
+import Footer from "@/components/Footer";
 
 export default function Home() {
-  const [showScanner, setShowScanner] = useState(false);
-  const [verifying, setVerifying] = useState(false);
   return (
     <div>
       <Navbar />
       <Hero />
-      <HowItWork />
+      <HomeHighlights />
+      <Footer />
     </div>
   );
 }

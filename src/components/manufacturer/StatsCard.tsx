@@ -3,39 +3,50 @@ import { LucideIcon } from "lucide-react";
 
 interface StatCardProps {
   title: string;
-  value: number;
+  value: number | string;
   icon: LucideIcon;
-  color: string;
-  bgColor: string;
-  borderColor: string;
-  change: string;
+  valueClassName?: string;
+  iconClassName?: string;
+  iconBgClassName?: string;
+  borderClassName?: string;
+  badgeText?: string;
 }
 
 const StatCard: React.FC<StatCardProps> = ({
   title,
   value,
   icon: Icon,
-  color,
-  bgColor,
-  borderColor,
-  change,
+  valueClassName,
+  iconClassName = "text-blue-600",
+  iconBgClassName = "bg-blue-100",
+  borderClassName = "border-gray-200",
+  badgeText,
 }) => {
   return (
     <div
-      className={`w-full bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 p-6 border ${borderColor} group cursor-pointer`}
+      className={`w-full bg-white rounded-2xl border ${borderClassName} p-5 shadow-sm hover:shadow-md transition-all duration-200`}
     >
       <div className="flex items-start justify-between mb-4">
         <div
-          className={`${bgColor} p-3 rounded-xl group-hover:scale-110 transition-transform duration-300`}
+          className={`w-11 h-11 rounded-xl ${iconBgClassName} flex items-center justify-center`}
         >
-          <Icon className={`w-6 h-6 ${color}`} />
+          <Icon className={`w-5 h-5 ${iconClassName}`} />
         </div>
-        <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">
-          {change}
-        </span>
+        {badgeText && (
+          <span className="text-[11px] font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
+            {badgeText}
+          </span>
+        )}
       </div>
-      <h3 className="text-gray-600 text-sm font-medium mb-2">{title}</h3>
-      <p className="text-3xl font-bold text-gray-900">{value}</p>
+
+      <h3 className="text-gray-600 text-sm font-medium mb-1">{title}</h3>
+      <p
+        className={`text-3xl font-semibold text-gray-900 ${
+          valueClassName || ""
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 };

@@ -65,14 +65,14 @@ export const STORAGE_KEYS = {
 
 // Transaction success messages
 export const MESSAGES = {
-  MINT_SUCCESS: "✅ Minted successfully! Batch ID:",
-  TRANSFER_SUCCESS: "✅ Transfer Successful!",
-  CONNECT_WALLET: "❌ Please connect your wallet first",
-  INSUFFICIENT_FUNDS: "❌ Insufficient ADA Balance!",
+  MINT_SUCCESS: "Minted successfully. Batch ID:",
+  TRANSFER_SUCCESS: "Transfer successful.",
+  CONNECT_WALLET: "Please connect your wallet first.",
+  INSUFFICIENT_FUNDS: "Insufficient ADA balance.",
   BATCH_NOT_MINTED:
-    "❌ This batch wasn't minted yet. Only minted batches can be transferred!",
+    "This batch is not minted yet. Only minted batches can be transferred.",
   INVALID_ADDRESS:
-    "❌ Invalid Cardano address. Must start with 'addr' or 'addr_test'",
+    "Invalid Cardano address. It must start with 'addr' or 'addr_test'.",
 } as const;
 
 // Validation patterns

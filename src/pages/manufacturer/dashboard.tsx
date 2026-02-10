@@ -1,359 +1,112 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  Plus,
-  Package,
-  CheckCircle,
-  TrendingUp,
-  Activity,
-  Wallet,
-} from "lucide-react";
-import { CardanoWallet, useWallet } from "@meshsdk/react";
-import { MeshWallet, stringToHex } from "@meshsdk/core";
-
-// Import all utilities from centralized index
-import { mintDrugBatch } from "@/utils/mint";
-import { transferDrugBatch } from "@/utils/transfer";
-import { mintBatchAPI, getDashboardStats } from "../../api";
+import { useCallback, useEffect, useState } from "react";
+import { Plus, Package, TrendingUp, Boxes, RefreshCw } from "lucide-react";
+import { useRouter } from "next/router";
+import { useRequireRole } from "@/hooks/useRequireRole";
+import { ROLES } from "@/constants/roles";
+import { useAuth } from "@/hooks/useAuth";
+import { getBatchDetailsByBatchId, getDashboardStats } from "../../api";
 import { getManufacturerId } from "@/utils/localStorage";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
-import {
-  MY_POLICY_ID,
-  MIN_ADA_BALANCE,
-  MESSAGES,
-  VALIDATION,
-} from "../../constants/index";
-
-// Import types
-import type { Batch, FormData } from "@/utils/types";
-
-// Import components
-import CreateBatchModal from "../../components/manufacturer/CreateBatchModal";
-import TransferModal from "../../components/manufacturer/TransferModal";
+import type { Batch } from "@/utils/types";
 import StatCard from "../../components/manufacturer/StatsCard";
 import BatchTable from "../../components/manufacturer/BatchTable";
 import DashboardHeader from "../../components/manufacturer/DashboardHeader";
 import AlertMessage from "../../components/manufacturer/AlertMessage";
-import { toast } from "react-toastify";
-import { useRouter } from "next/navigation";
+import { MIN_ADA_BALANCE } from "../../constants/index";
+import { ASSUME_WALLET_CONNECTED, WALLET_FEATURES_ENABLED } from "@/utils/walletMode";
 
-const Overview = () => {
-  const { connected, wallet } = useWallet();
+export default function ManufacturerDashboard() {
+  useRequireRole([ROLES.MANUFACTURER]);
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const walletState: {
+    connected?: boolean;
+    wallet?: null;
+    connecting?: boolean;
+    disconnect?: () => Promise<void>;
+  } = {
+    connected: false,
+    wallet: null,
+    connecting: false,
+  };
+  const { connected, wallet } = walletState;
+  const effectiveConnected =
+    (WALLET_FEATURES_ENABLED && connected) || ASSUME_WALLET_CONNECTED;
   const {
     balance: walletBalance,
     checking: checkingBalance,
-    checkBalance,
   } = useWalletBalance(connected, wallet);
 
-  const router = useRouter();
-  // State management
-  const [isClient, setIsClient] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [status, setStatus] = useState("");
   const [walletError, setWalletError] = useState("");
-  const [showTransferModal, setShowTransferModal] = useState(false);
-  const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
-  const [recipientAddress, setRecipientAddress] = useState("");
-  const [transferring, setTransferring] = useState(false);
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [mintedBatchIds, setMintedBatchIds] = useState<Set<string>>(new Set());
+  const [manualConnecting, setManualConnecting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [openingBatchId, setOpeningBatchId] = useState("");
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState<FormData>({
-    batchId: "",
-    drugName: "",
-    manufactureDate: "",
-    expiryDate: "",
-    chemicalComposition: "",
-    quantity: "",
-    manufacturer: "PharmaCorp Ltd",
-  });
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [lastSynced, setLastSynced] = useState<string>("");
 
-  // Fetch dashboard data from backend
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (isManualRefresh = false) => {
     const manufacturerId = getManufacturerId();
     if (!manufacturerId) {
-      console.warn("No manufacturer ID found in localStorage");
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (isManualRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       const data = await getDashboardStats(manufacturerId);
-      console.log("Dashboard data received:", data);
-
       if (data.success) {
-        const transformedBatches: Batch[] = data.batches.map((batch) => ({
+        const transformed: Batch[] = data.batches.map((batch) => ({
           id: batch.batch_id,
           composition: batch.composition,
           expiryDate: batch.expiry_date,
           status: batch.status as any,
           medicine_name: batch.medicine_name,
         }));
-
-        setBatches(transformedBatches);
-
-        // Track minted batches
-        const minted = new Set(
-          transformedBatches
-            .filter((b) => b.status === "Minted" || b.status === "In Transit")
-            .map((b) => b.id)
+        setBatches(transformed);
+        setLastSynced(
+          new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         );
-        setMintedBatchIds(minted);
       }
-    } catch (error: any) {
-      console.error(" Error fetching dashboard data:", error);
-      setStatus("Failed to load dashboard data");
+    } catch {
+      setWalletError("Failed to load dashboard data.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    setIsClient(true);
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async () => {
-    if (!connected) {
-      toast.success(MESSAGES.CONNECT_WALLET);
-      return;
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.refresh === "1") {
+      fetchDashboardData(true);
     }
+  }, [fetchDashboardData, router.isReady, router.query.refresh]);
 
-    const manufacturerId = getManufacturerId();
-    if (!manufacturerId) {
-      toast.error(" Please log in again.");
-      return;
+  useEffect(() => {
+    const refreshFlag = localStorage.getItem("manufacturerDashboardRefresh");
+    if (refreshFlag === "1") {
+      localStorage.removeItem("manufacturerDashboardRefresh");
+      fetchDashboardData(true);
     }
+  }, [fetchDashboardData]);
 
-    // Validate required fields
-    if (
-      !formData.drugName ||
-      !formData.chemicalComposition ||
-      !formData.expiryDate
-    ) {
-      toast.warn(" Please fill in all required fields");
-      return;
-    }
+  useEffect(() => {
+    if (connected) setManualConnecting(false);
+  }, [connected]);
 
-    setShowSuccess(false);
-
-    try {
-      const batchId =
-        formData.batchId || "BATCH-" + Math.floor(Math.random() * 10000);
-
-      const batchData = {
-        drugName: formData.drugName,
-        batchId,
-        expiryDate: formData.expiryDate,
-        manufacturer: formData.manufacturer,
-        quantity: formData.quantity,
-      };
-
-      const txHash = await mintDrugBatch(
-        wallet as unknown as MeshWallet,
-        batchData
-      );
-      console.log("Blockchain mint successful! TX:", txHash);
-
-      // Get wallet address and asset name
-      const addresses = await wallet.getUsedAddresses();
-      const manufacturerWallet = addresses[0];
-      const assetNameHex = stringToHex(batchId);
-
-      // Backend API Call
-
-      const backendPayload = {
-        batch_id: batchId,
-        medicine_name: formData.drugName,
-        composition: formData.chemicalComposition,
-        manufacturer_id: manufacturerId,
-        manufactured_date:
-          formData.manufactureDate || new Date().toISOString().split("T")[0],
-        expiry_date: formData.expiryDate,
-        quantity: formData.quantity || "0",
-        policy_id: MY_POLICY_ID,
-        asset_name: assetNameHex,
-        manufacturer_wallet: manufacturerWallet,
-        tx_hash: txHash,
-      };
-
-      const backendResponse = await mintBatchAPI(backendPayload);
-
-      console.log(backendResponse);
-
-      const batchDetailsData = {
-        batch_id: batchId,
-        qr_code: backendResponse.qr_code,
-        medicine_name: formData.drugName,
-        composition: formData.chemicalComposition,
-        expiry_date: formData.expiryDate,
-        manufacture_date:
-          formData.manufactureDate || new Date().toISOString().split("T")[0],
-        quantity: formData.quantity,
-        tx_hash: txHash,
-        policy_id: MY_POLICY_ID,
-        asset_name: batchId,
-      };
-
-      // Save to localStorage
-      localStorage.setItem(
-        "currentBatchDetails",
-        JSON.stringify(batchDetailsData)
-      );
-
-      const newBatch: Batch = {
-        id: batchId,
-        composition: formData.chemicalComposition,
-        expiryDate: formData.expiryDate,
-        status: "Minted",
-        medicine_name: formData.drugName,
-        quantity: formData.quantity,
-      };
-
-      setBatches([newBatch, ...batches]);
-      setMintedBatchIds((prev) => new Set(prev).add(batchId));
-
-      toast.success(
-        ` Success! Batch minted and saved!\n\nBatch ID: ${batchId}\nTX: ${txHash.substring(
-          0,
-          20
-        )}...`
-      );
-      setShowSuccess(true);
-
-      //  Refresh dashboard
-
-      await fetchDashboardData();
-
-      //  Close modal after delay
-      setTimeout(() => {
-        // setShowSuccess(false);
-        // setShowModal(false);
-        // setFormData({
-        //   batchId: "",
-        //   drugName: "",
-        //   manufactureDate: "",
-        //   expiryDate: "",
-        //   chemicalComposition: "",
-        //   quantity: "",
-        //   manufacturer: "PharmaCorp Ltd",
-        // });
-        // setStatus("");
-        setShowModal(false);
-        router.push("/manufacturer/batch-details");
-      }, 2000);
-    } catch (error: any) {
-      console.error(" error:", error);
-
-      let errorMessage = " Error: ";
-
-      if (error.response) {
-        console.error("Backend error response:", error.response.data);
-        errorMessage +=
-          error.response.data.error ||
-          error.response.data.message ||
-          error.message;
-      } else if (error.request) {
-        console.error("No response from backend");
-        errorMessage += "No response from backend. Check if server is running.";
-      } else {
-        errorMessage += error.message;
-      }
-
-      toast.error(errorMessage);
-      setShowSuccess(false);
-    }
-  };
-
-  const handleTransfer = async () => {
-    if (!connected || !selectedBatch || !recipientAddress.trim()) {
-      toast(MESSAGES.CONNECT_WALLET);
-      return;
-    }
-
-    if (!VALIDATION.CARDANO_ADDRESS_PATTERN.test(recipientAddress)) {
-      toast.error(MESSAGES.INVALID_ADDRESS);
-      return;
-    }
-
-    if (!mintedBatchIds.has(selectedBatch.id)) {
-      toast.error(MESSAGES.BATCH_NOT_MINTED);
-      return;
-    }
-
-    setTransferring(true);
-    // setStatus(" Checking wallet balance...");
-
-    try {
-      const utxos = await wallet.getUtxos();
-      if (!utxos?.length) throw new Error("No UTxOs found");
-
-      let totalLovelace = 0;
-      utxos.forEach((utxo: any) => {
-        const lovelace = utxo.output.amount.find(
-          (a: any) => a.unit === "lovelace"
-        );
-        if (lovelace) totalLovelace += parseInt(lovelace.quantity);
-      });
-
-      const totalAda = totalLovelace / 1000000;
-      if (totalAda < MIN_ADA_BALANCE) {
-        throw new Error(
-          `${MESSAGES.INSUFFICIENT_FUNDS} You have: ${totalAda.toFixed(2)} ADA`
-        );
-      }
-
-      const assetNameHex = stringToHex(selectedBatch.id);
-      const hash = await transferDrugBatch(
-        wallet as unknown as MeshWallet,
-        recipientAddress,
-        MY_POLICY_ID,
-        assetNameHex
-      );
-
-      setBatches((prev) =>
-        prev.map((b) =>
-          b.id === selectedBatch.id ? { ...b, status: "In Transit" } : b
-        )
-      );
-
-      setMintedBatchIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(selectedBatch.id);
-        return newSet;
-      });
-
-      toast.success(
-        `${MESSAGES.TRANSFER_SUCCESS}\nTx: ${hash.substring(0, 20)}...`
-      );
-      await checkBalance();
-
-      setTimeout(async () => {
-        setShowTransferModal(false);
-        setSelectedBatch(null);
-        setRecipientAddress("");
-        setTransferring(false);
-        setStatus("");
-        await fetchDashboardData();
-      }, 3000);
-    } catch (error: any) {
-      console.error("Transfer error:", error);
-      setStatus(` Transfer Failed: ${error.message}`);
-      setTransferring(false);
-    }
-  };
-
-  // Calculate statistics from backend data
   const stats = {
     total: batches.length,
-    active: batches.filter((b) => b.status === "Active").length,
     minted: batches.filter((b) => b.status === "Minted").length,
     inTransit: batches.filter((b) => b.status === "In Transit").length,
   };
@@ -363,50 +116,108 @@ const Overview = () => {
       id: 1,
       title: "Total Batches",
       value: stats.total,
-      icon: Package,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-100",
-      change: "+12%",
+      icon: Boxes,
+      valueClassName: "text-gray-900",
+      iconClassName: "text-blue-700",
+      iconBgClassName: "bg-blue-100",
+      borderClassName: "border-blue-100",
+      badgeText: "All",
     },
-
     {
       id: 2,
       title: "Minted",
       value: stats.minted,
-      icon: Activity,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-100",
-      change: "+5%",
+      icon: Package,
+      valueClassName: "text-emerald-600",
+      iconClassName: "text-emerald-700",
+      iconBgClassName: "bg-emerald-100",
+      borderClassName: "border-emerald-100",
+      badgeText: "On-chain",
     },
     {
       id: 3,
       title: "In Transit",
       value: stats.inTransit,
       icon: TrendingUp,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-      borderColor: "border-purple-100",
-      change: "+15%",
+      valueClassName: "text-amber-600",
+      iconClassName: "text-amber-700",
+      iconBgClassName: "bg-amber-100",
+      borderClassName: "border-amber-100",
+      badgeText: "Moving",
     },
   ];
+  const sdkConnecting = Boolean(walletState?.connecting);
+  const walletConnecting =
+    !effectiveConnected && (manualConnecting || sdkConnecting);
 
-  if (!isClient) return null;
+  const handleLogout = async () => {
+    try {
+      const disconnectFn = walletState?.disconnect;
+      if (typeof disconnectFn === "function") {
+        await disconnectFn();
+      }
+    } catch (error) {
+      console.warn("Wallet disconnect failed:", error);
+    } finally {
+      localStorage.removeItem("lastConnectedWallet");
+      logout();
+    }
+  };
+
+  const handleOpenBatch = async (batch: Batch) => {
+    setOpeningBatchId(batch.id);
+    try {
+      const details = await getBatchDetailsByBatchId(batch.id);
+      localStorage.setItem("currentBatchDetails", JSON.stringify(details));
+      router.push(
+        `/manufacturer/batch-details?batchId=${encodeURIComponent(batch.id)}`
+      );
+    } catch {
+      // Fallback to table data if full details query fails.
+      localStorage.setItem(
+        "currentBatchDetails",
+        JSON.stringify({
+          batch_id: batch.id,
+          qr_code: "",
+          medicine_name: batch.medicine_name || "Unknown",
+          composition: batch.composition,
+          expiry_date: batch.expiryDate,
+          manufacture_date: "",
+          quantity: batch.quantity || "0",
+          tx_hash: "",
+          policy_id: "",
+          asset_name: batch.id,
+          status: batch.status,
+        })
+      );
+      router.push(
+        `/manufacturer/batch-details?batchId=${encodeURIComponent(batch.id)}`
+      );
+    } finally {
+      setOpeningBatchId("");
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-slate-100 to-slate-50">
       <DashboardHeader
-        connected={connected}
+        connected={effectiveConnected}
+        connecting={walletConnecting}
+        demoMode={ASSUME_WALLET_CONNECTED && !connected}
         walletBalance={walletBalance}
         checkingBalance={checkingBalance}
-        onWalletClick={() => setWalletError("")}
+        companyName={user?.username || "PharmaCorp Ltd."}
+        onLogout={handleLogout}
+        onWalletClick={() => {
+          setWalletError("");
+          setManualConnecting(true);
+          setTimeout(() => setManualConnecting(false), 10000);
+        }}
       />
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Low Balance Warning */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-7">
         {connected && walletBalance > 0 && walletBalance < MIN_ADA_BALANCE && (
-          <div className="mb-8">
+          <div className="mb-6">
             <AlertMessage
               type="warning"
               title="Low Balance Warning"
@@ -421,107 +232,97 @@ const Overview = () => {
           </div>
         )}
 
-        {/* Wallet Error */}
         {walletError && (
-          <div className="mb-8">
+          <div className="mb-6">
             <AlertMessage
               type="error"
-              title="Wallet Connection Error"
+              title="Notice"
               message={walletError}
               onClose={() => setWalletError("")}
             />
           </div>
         )}
 
-        {!connected ? (
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-8 text-center">
-            <Wallet className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
-              Connect Your Wallet
-            </h3>
-            <p className="text-gray-600">
-              Please connect your Cardano wallet to start managing batches.
+        {ASSUME_WALLET_CONNECTED && !connected && (
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <p className="text-amber-800 text-sm md:text-base">
+              Demo mode is active: wallet is treated as connected for faster
+              testing.
             </p>
           </div>
-        ) : (
-          <>
-            {/* Stats from Backend */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {statCards.map((card) => (
-                <StatCard key={card.id} {...card} />
-              ))}
-            </div>
+        )}
 
-            {/* Create Button */}
+        {!effectiveConnected && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-blue-800 text-sm md:text-base">
+              Wallet not connected. You can still view dashboard data, but
+              minting/transfers require a connected Cardano wallet. Use the
+              Connect Wallet button in the header to continue.
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {statCards.map((card) => (
+            <StatCard key={card.id} {...card} />
+          ))}
+        </div>
+
+        <div className="mb-6">
+          <div className="flex flex-wrap gap-3">
             <button
-              onClick={() => setShowModal(true)}
-              className="mb-8 flex items-center px-6 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg font-medium"
+              onClick={() => router.push("/manufacturer/create-batch")}
+              disabled={!effectiveConnected}
+              className="inline-flex items-center px-7 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-5 h-5 mr-2" />
               Create New Batch
             </button>
+            <button
+              onClick={() => fetchDashboardData(true)}
+              disabled={refreshing}
+              className="inline-flex items-center px-5 py-3.5 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-60"
+            >
+              <RefreshCw
+                className={`w-5 h-5 mr-2 ${refreshing ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </button>
+          </div>
+        </div>
 
-            {/* Table from Backend */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900">
-                  Recent Batches
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Data loaded from backend database
-                </p>
-              </div>
-              <div className="overflow-x-auto">
-                {loading ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
-                    <p className="text-gray-600 mt-4">Loading..</p>
-                  </div>
-                ) : (
-                  <BatchTable
-                    batches={batches}
-                    mintedBatchIds={mintedBatchIds}
-                    onViewBatch={(b) => console.log("View:", b)}
-                    onTransferBatch={(b) => {
-                      setSelectedBatch(b);
-                      setShowTransferModal(true);
-                    }}
-                    onCreateBatch={() => setShowModal(true)}
-                  />
-                )}
-              </div>
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold text-gray-900">Your Batches</h2>
+              {lastSynced && (
+                <span className="text-sm text-gray-500">
+                  Last synced: {lastSynced}
+                </span>
+              )}
             </div>
-          </>
+          </div>
+          <div className="overflow-x-auto">
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
+                <p className="text-gray-600 mt-4">Loading...</p>
+              </div>
+            ) : (
+              <BatchTable
+                batches={batches}
+                onViewBatch={handleOpenBatch}
+                onCreateBatch={() => router.push("/manufacturer/create-batch")}
+              />
+            )}
+          </div>
+        </div>
+        {openingBatchId && (
+          <p className="text-sm text-gray-600 mt-4">
+            Loading batch details for {openingBatchId}...
+          </p>
         )}
       </div>
-
-      {/* Modals */}
-      {showModal && (
-        <CreateBatchModal
-          setShowModal={setShowModal}
-          formData={formData}
-          handleInputChange={handleInputChange}
-          handleSubmit={handleSubmit}
-          showSuccess={showSuccess}
-        />
-      )}
-
-      {showTransferModal && selectedBatch && (
-        <TransferModal
-          batch={selectedBatch}
-          recipientAddress={recipientAddress}
-          transferring={transferring}
-          onClose={() => {
-            setShowTransferModal(false);
-            setSelectedBatch(null);
-            setRecipientAddress("");
-          }}
-          onAddressChange={setRecipientAddress}
-          onTransfer={handleTransfer}
-        />
-      )}
     </div>
   );
-};
-
-export default Overview;
+}

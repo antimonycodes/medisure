@@ -1,5 +1,4 @@
-import { MeshTxBuilder } from "@meshsdk/core";
-import { MeshWallet } from "@meshsdk/core";
+import type { MeshWallet } from "@meshsdk/core";
 
 export async function transferDrugBatch(
   wallet: MeshWallet,
@@ -7,6 +6,8 @@ export async function transferDrugBatch(
   policyId: string,
   assetNameHex: string
 ) {
+  const { MeshTxBuilder } = await import("@meshsdk/core");
+
   console.log(" Starting Transfer...");
 
   // 1. Get Wallet Info

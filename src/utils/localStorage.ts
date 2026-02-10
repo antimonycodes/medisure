@@ -20,6 +20,44 @@ export const getManufacturerId = (): string | null => {
 };
 
 /**
+ * Get the distributor ID from localStorage
+ */
+export const getDistributorId = (): string | null => {
+  if (typeof window === "undefined") return null;
+
+  const authUser = localStorage.getItem("auth_user");
+  if (authUser) {
+    try {
+      const user: User = JSON.parse(authUser);
+      return user.entityId;
+    } catch (e) {
+      console.error("Error parsing auth_user from localStorage:", e);
+      return null;
+    }
+  }
+  return null;
+};
+
+/**
+ * Get the pharmacy ID from localStorage
+ */
+export const getPharmacyId = (): string | null => {
+  if (typeof window === "undefined") return null;
+
+  const authUser = localStorage.getItem("auth_user");
+  if (authUser) {
+    try {
+      const user: User = JSON.parse(authUser);
+      return user.entityId;
+    } catch (e) {
+      console.error("Error parsing auth_user from localStorage:", e);
+      return null;
+    }
+  }
+  return null;
+};
+
+/**
  * Get the auth token from localStorage
  */
 export const getAuthToken = (): string | null => {

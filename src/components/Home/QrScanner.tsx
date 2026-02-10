@@ -62,7 +62,7 @@ const QrScanner: React.FC<QrScannerProps> = ({ onScanSuccess, onClose }) => {
 
         <h2 className="text-xl font-bold text-gray-800 mb-4">
           <Camera className="inline w-6 h-6 mr-2 text-blue-600" />
-          Scan Medicine QR Code
+          Scan Medicine QR/Barcode
         </h2>
 
         {/* The target element for the scanner */}

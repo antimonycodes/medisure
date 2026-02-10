@@ -1,20 +1,17 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import { QRCodeSVG } from "qrcode.react";
 import {
-  CheckCircle,
+  CalendarDays,
+  CheckCircle2,
   Download,
-  Share2,
-  ArrowLeft,
   ExternalLink,
   Package,
-  Calendar,
-  Beaker,
-  Hash,
   Pill,
-  Shield,
+  Send,
+  TestTubeDiagonal,
 } from "lucide-react";
 
 interface BatchDetailsProps {
@@ -29,21 +26,36 @@ interface BatchDetailsProps {
     tx_hash: string;
     policy_id: string;
     asset_name: string;
+    status?: "Pending" | "Minted" | "In Transit";
   };
 }
 
-// Example URL generated: https://yourdomain.com/?assetId=d4454e99...
-const getVerificationUrl = (policyId: string): string => {
-  // Use window.location.origin to get the current domain (e.g., http://localhost:3000 or https://prod.com)
+const getVerificationUrl = (qrCode: string, batchId: string): string => {
   const base = typeof window !== "undefined" ? window.location.origin : "";
-  return `${base}/?assetId=${policyId}`;
+  if (qrCode) return `${base}/verified?batchId=${encodeURIComponent(qrCode)}`;
+  return `${base}/verified?batchId=${encodeURIComponent(batchId)}`;
+};
+
+const formatTx = (txHash?: string) => {
+  if (!txHash) return "N/A";
+  if (txHash.length <= 14) return txHash;
+  return `${txHash.slice(0, 8)}...${txHash.slice(-4)}`;
 };
 
 const BatchDetails: React.FC<BatchDetailsProps> = ({ batchData }) => {
   const router = useRouter();
   const [downloading, setDownloading] = useState(false);
 
-  const verificationUrl = getVerificationUrl(batchData.policy_id);
+  const verificationUrl = getVerificationUrl(batchData.qr_code, batchData.batch_id);
+  const txShort = formatTx(batchData.tx_hash);
+  const tokenId = batchData.asset_name || "token_abc123";
+  const status = batchData.status || (batchData.tx_hash ? "Minted" : "Pending");
+  const statusStyles =
+    status === "In Transit"
+      ? "bg-amber-500 text-white"
+      : status === "Minted"
+      ? "bg-emerald-500 text-white"
+      : "bg-gray-500 text-white";
 
   const downloadQRCode = async () => {
     setDownloading(true);
@@ -55,28 +67,15 @@ const BatchDetails: React.FC<BatchDetailsProps> = ({ batchData }) => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
 
-      canvas.width = 1000;
-      canvas.height = 1000;
+      canvas.width = 1024;
+      canvas.height = 1024;
 
       const img = new Image();
       img.onload = () => {
         if (ctx) {
-          // White background
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-          // Draw QR code
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          // Add batch ID text at bottom
-          ctx.fillStyle = "#000000";
-          ctx.font = "bold 40px Arial";
-          ctx.textAlign = "center";
-          ctx.fillText(
-            batchData.batch_id,
-            canvas.width / 2,
-            canvas.height - 50
-          );
+          ctx.drawImage(img, 112, 112, 800, 800);
         }
 
         const pngFile = canvas.toDataURL("image/png");
@@ -84,35 +83,17 @@ const BatchDetails: React.FC<BatchDetailsProps> = ({ batchData }) => {
         downloadLink.download = `QR-${batchData.batch_id}.png`;
         downloadLink.href = pngFile;
         downloadLink.click();
-
         setDownloading(false);
       };
 
       img.src = "data:image/svg+xml;base64," + btoa(svgData);
     } catch (error) {
-      console.error("Download error:", error);
       setDownloading(false);
     }
   };
 
-  const shareQR = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Batch ${batchData.batch_id} - Authentication`,
-          text: `Verify medicine authenticity: ${batchData.medicine_name}`,
-          url: verificationUrl,
-        });
-      } catch (err) {
-        console.log("Share cancelled or error:", err);
-      }
-    } else {
-      navigator.clipboard.writeText(verificationUrl);
-      // alert("Verification URL copied to clipboard!");
-    }
-  };
-
   const viewOnExplorer = () => {
+    if (!batchData.tx_hash) return;
     window.open(
       `https://preprod.cardanoscan.io/transaction/${batchData.tx_hash}`,
       "_blank"
@@ -120,227 +101,221 @@ const BatchDetails: React.FC<BatchDetailsProps> = ({ batchData }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Success Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-green-600" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">
-            Mint Successful!
-          </h1>
-          <p className="text-center text-gray-600">
-            Your batch has been registered on the Cardano blockchain
-          </p>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column - Batch Details */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-              <Package className="w-6 h-6 mr-2 text-blue-600" />
-              Batch Information
-            </h2>
-
-            <div className="space-y-4">
-              <div className="pb-4 border-b border-gray-200">
-                <label className="flex items-center text-sm font-semibold text-gray-600 mb-2">
-                  <Hash className="w-4 h-4 mr-2 text-gray-400" />
-                  Batch ID
-                </label>
-                <p className="text-lg font-mono font-bold text-gray-900">
-                  {batchData.batch_id}
-                </p>
-              </div>
-
-              <div className="pb-4 border-b border-gray-200">
-                <label className="flex items-center text-sm font-semibold text-gray-600 mb-2">
-                  <Pill className="w-4 h-4 mr-2 text-gray-400" />
-                  Medicine Name
-                </label>
-                <p className="text-lg font-semibold text-gray-900">
-                  {batchData.medicine_name}
-                </p>
-              </div>
-
-              <div className="pb-4 border-b border-gray-200">
-                <label className="flex items-center text-sm font-semibold text-gray-600 mb-2">
-                  <Beaker className="w-4 h-4 mr-2 text-gray-400" />
-                  Composition
-                </label>
-                <p className="text-gray-900">{batchData.composition}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="flex items-center text-sm font-semibold text-gray-600 mb-2">
-                    <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                    Manufactured
-                  </label>
-                  <p className="text-gray-900">{batchData.manufacture_date}</p>
-                </div>
-                <div>
-                  <label className="flex items-center text-sm font-semibold text-gray-600 mb-2">
-                    <Calendar className="w-4 h-4 mr-2 text-red-400" />
-                    Expires
-                  </label>
-                  <p className="text-gray-900">{batchData.expiry_date}</p>
-                </div>
-              </div>
-
-              <div className="pb-4 border-b border-gray-200">
-                <label className="flex items-center text-sm font-semibold text-gray-600 mb-2">
-                  <Package className="w-4 h-4 mr-2 text-gray-400" />
-                  Quantity
-                </label>
-                <p className="text-gray-900">{batchData.quantity} units</p>
-              </div>
-
-              <div className="pb-4">
-                <label className="flex items-center text-sm font-semibold text-gray-600 mb-2">
-                  <Shield className="w-4 h-4 mr-2 text-gray-400" />
-                  NFT Token ID
-                </label>
-                <p className="text-sm font-mono text-gray-700 break-all">
-                  {batchData.asset_name}
-                </p>
-              </div>
-            </div>
-
-            {/* Blockchain Info */}
-            <div className="mt-6 bg-blue-50 rounded-xl p-4">
-              <h3 className="font-semibold text-blue-900 mb-2 flex items-center">
-                <Shield className="w-4 h-4 mr-2" />
-                Blockchain Details
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-blue-700">Transaction Hash:</span>
-                  <button
-                    onClick={viewOnExplorer}
-                    className="text-blue-600 hover:text-blue-800 font-mono flex items-center"
-                  >
-                    {batchData.tx_hash.substring(0, 16)}...
-                    <ExternalLink className="w-3 h-3 ml-1" />
-                  </button>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-blue-700">Policy ID:</span>
-                  <span className="text-blue-900 font-mono text-xs">
-                    {batchData.policy_id.substring(0, 20)}...
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - QR Code */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">
-              Authentication QR Code
-            </h2>
-
-            <p className="text-sm text-gray-600 mb-6">
-              Print this QR code and attach it to the medicine packaging.
-              Customers can scan it to verify authenticity.
+    <div className="min-h-screen bg-gray-100 pb-10">
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-6 py-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold text-gray-900">
+              {batchData.batch_id}
+            </h1>
+            <p className="text-gray-600 mt-2 text-lg">
+              {batchData.medicine_name || batchData.composition}
             </p>
+          </div>
+          <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${statusStyles}`}>
+            {status}
+          </span>
+        </div>
+      </header>
 
-            {/* QR Code Display */}
-            <div className="bg-gradient-to-br from-blue-50 to-white p-8 rounded-xl border-4 border-blue-500 mb-6">
-              <QRCodeSVG
-                id="qr-code-svg"
-                // ✅ Now using the full, scannable URL
-                value={verificationUrl}
-                size={280}
-                level="H"
-                includeMargin={true}
-                className="mx-auto"
-              />
-              <p className="text-center mt-4 font-mono text-sm font-bold text-gray-700">
-                {batchData.batch_id}
-              </p>
-            </div>
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+          <section className="space-y-6">
+            <article className="bg-white border border-gray-200 rounded-2xl p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                Batch Information
+              </h2>
 
-            {/* QR Info */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <div className="text-sm space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">
-                    Policy ID (Verification Asset):
-                  </span>
-                  <span className="font-mono text-xs text-gray-900 break-all">
-                    {batchData.policy_id.substring(0, 18)}...
-                  </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <InfoItem
+                  icon={<Package className="w-5 h-5 text-blue-600" />}
+                  iconBg="bg-blue-100"
+                  label="Batch ID"
+                  value={batchData.batch_id}
+                />
+                <InfoItem
+                  icon={<CalendarDays className="w-5 h-5 text-emerald-600" />}
+                  iconBg="bg-emerald-100"
+                  label="Manufacture Date"
+                  value={batchData.manufacture_date || "-"}
+                />
+                <InfoItem
+                  icon={<TestTubeDiagonal className="w-5 h-5 text-indigo-600" />}
+                  iconBg="bg-indigo-100"
+                  label="Composition"
+                  value={batchData.composition}
+                />
+                <InfoItem
+                  icon={<CalendarDays className="w-5 h-5 text-red-600" />}
+                  iconBg="bg-red-100"
+                  label="Expiry Date"
+                  value={batchData.expiry_date}
+                />
+                <InfoItem
+                  icon={<Pill className="w-5 h-5 text-blue-600" />}
+                  iconBg="bg-blue-100"
+                  label="Quantity"
+                  value={`${batchData.quantity || "0"} units`}
+                />
+              </div>
+            </article>
+
+            <article className="bg-white border border-gray-200 rounded-2xl p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                Blockchain Information
+              </h2>
+
+              <div className="space-y-5">
+                <div>
+                  <p className="text-gray-500 text-base">NFT Token ID</p>
+                  <p className="text-base text-gray-900 mt-1 break-all">
+                    {tokenId}
+                  </p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">QR Code Target URL:</span>
-                  <span className="text-blue-600 text-xs break-all">
-                    /?assetId={batchData.policy_id.substring(0, 12)}...
+
+                <div>
+                  <p className="text-gray-500 text-base">Transaction Hash</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-5">
+                    <p className="text-base text-gray-900">{txShort}</p>
+                    <button
+                      type="button"
+                      onClick={viewOnExplorer}
+                      disabled={!batchData.tx_hash}
+                      className="inline-flex items-center text-sm text-gray-800 hover:text-blue-700 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      View on Explorer
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-gray-500 text-base">Minting Status</p>
+                  <span
+                    className={`inline-flex mt-2 px-4 py-1.5 text-sm rounded-full font-medium ${statusStyles}`}
+                  >
+                    {status === "Pending" ? "Pending Mint" : status}
                   </span>
                 </div>
               </div>
-            </div>
+            </article>
 
-            {/* Action Buttons */}
-            <div className="space-y-3">
+            <article className="bg-white border border-gray-200 rounded-2xl p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                Supply Chain Timeline
+              </h2>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium text-gray-900">
+                      Manufacturer
+                    </p>
+                    <p className="text-gray-700 text-base">
+                      PharmaCorp Ltd.
+                    </p>
+                    <p className="text-gray-500 text-sm mt-1">
+                      {batchData.manufacture_date || "Jan 15, 2024, 02:30 AM"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={viewOnExplorer}
+                  className="inline-flex items-center text-sm text-gray-800 hover:text-blue-700 transition-colors whitespace-nowrap"
+                >
+                  <ExternalLink className="w-4 h-4 mr-1.5" />
+                  {txShort}
+                </button>
+              </div>
+            </article>
+
+            <article className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-semibold text-gray-900">
+                  Ready to Transfer
+                </h3>
+                <p className="text-gray-700 text-base mt-2">
+                  Transfer this batch to the next verified party in the supply
+                  chain
+                </p>
+              </div>
               <button
+                type="button"
+                onClick={() => router.push("/manufacturer/transfer-batch")}
+                disabled={status === "In Transit"}
+                className="inline-flex items-center px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-base font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Send className="w-5 h-5 mr-2" />
+                {status === "In Transit" ? "Already In Transit" : "Transfer Batch"}
+              </button>
+            </article>
+          </section>
+
+          <aside>
+            <article className="bg-white border border-gray-200 rounded-2xl p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                Verification QR Code
+              </h2>
+
+              <div className="w-[250px] h-[250px] max-w-full mx-auto rounded-2xl border border-gray-300 bg-white flex items-center justify-center">
+                <QRCodeSVG
+                  id="qr-code-svg"
+                  value={verificationUrl}
+                  size={180}
+                  level="H"
+                  includeMargin
+                />
+              </div>
+
+              <button
+                type="button"
                 onClick={downloadQRCode}
                 disabled={downloading}
-                className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all font-semibold shadow-lg hover:shadow-xl disabled:opacity-50"
+                className="mt-5 w-full h-12 rounded-xl border border-gray-300 bg-white text-gray-800 text-sm hover:bg-gray-50 transition-colors inline-flex items-center justify-center disabled:opacity-60"
               >
                 <Download className="w-5 h-5 mr-2" />
                 {downloading ? "Downloading..." : "Download QR Code"}
               </button>
 
-              <button
-                onClick={shareQR}
-                className="w-full flex items-center justify-center px-6 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-semibold"
-              >
-                <Share2 className="w-5 h-5 mr-2" />
-                Share QR Code
-              </button>
-
-              <button
-                onClick={viewOnExplorer}
-                className="w-full flex items-center justify-center px-6 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all font-semibold"
-              >
-                <ExternalLink className="w-5 h-5 mr-2" />
-                View on Explorer
-              </button>
-            </div>
-
-            {/* Instructions */}
-            <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
-              <h4 className="font-semibold text-yellow-900 mb-2 text-sm">
-                📋 Next Steps:
-              </h4>
-              <ol className="text-xs text-yellow-800 space-y-1 list-decimal list-inside">
-                <li>Download the QR code image</li>
-                <li>Print and attach to medicine packaging</li>
-                <li>Customers can scan to verify authenticity</li>
-                <li>Track batch journey on blockchain</li>
-              </ol>
-            </div>
-          </div>
+              <p className="mt-6 text-gray-700 text-base leading-7">
+                Print and attach this QR code to product packaging for patient
+                verification
+              </p>
+            </article>
+          </aside>
         </div>
-
-        {/* Bottom Action */}
-        <div className="mt-6 flex justify-center">
-          <button
-            onClick={() => router.push("/manufacturer/dashboard")}
-            className="flex items-center px-8 py-4 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-all font-semibold shadow-lg border-2 border-gray-200"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Dashboard
-          </button>
-        </div>
-      </div>
+      </main>
     </div>
   );
 };
+
+function InfoItem({
+  icon,
+  iconBg,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  iconBg: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div
+        className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}
+      >
+        {icon}
+      </div>
+      <div>
+        <p className="text-gray-500 text-sm">{label}</p>
+        <p className="text-gray-900 text-base leading-7">{value}</p>
+      </div>
+    </div>
+  );
+}
 
 export default BatchDetails;

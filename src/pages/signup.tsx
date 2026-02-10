@@ -5,7 +5,7 @@ import Image from "next/image";
 import axios from "axios";
 import { toast } from "react-toastify";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 
 const SignUp = () => {
   // User type: "patient" or "other"
@@ -39,6 +39,12 @@ const SignUp = () => {
   });
 
   const router = useRouter();
+  const toUsername = (value: string) =>
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9._-]/g, "");
 
   const handlePatientChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setPatientData({
@@ -70,7 +76,8 @@ const SignUp = () => {
         const res = await axios.post(
           `${process.env.NEXT_PUBLIC_BASE_URL}/auth/signup/`,
           {
-            username: patientData.fullName,
+            username: toUsername(patientData.fullName),
+            name: patientData.fullName.trim(),
             email: patientData.email,
             password: patientData.password,
             phone: patientData.phone,
@@ -89,7 +96,8 @@ const SignUp = () => {
         const res = await axios.post(
           `${process.env.NEXT_PUBLIC_BASE_URL}/auth/signup/`,
           {
-            username: businessData.organizationName,
+            username: toUsername(businessData.organizationName),
+            name: businessData.organizationName.trim(),
             email: businessData.email,
             password: businessData.password,
             phone: businessData.phone,

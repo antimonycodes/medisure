@@ -33,7 +33,7 @@ export const useWalletBalance = (
 
         const ada = totalLovelace / 1000000;
         setBalance(ada);
-        console.log(`💰 Wallet Balance: ${ada} ADA`);
+        console.log(`Wallet Balance: ${ada} ADA`);
       } catch (error) {
         console.error("Error checking balance:", error);
         setBalance(0);
