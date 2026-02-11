@@ -99,6 +99,36 @@ export interface PharmacyDashboardStats {
   incoming: any[];
 }
 
+export interface ShopMedicineItem {
+  inventoryId: string;
+  medicineName: string;
+  composition: string;
+  manufacturer: string;
+  manufactureDate: string;
+  expiryDate: string;
+  quantityAvailable: number;
+  pricePerUnit: number;
+  batchId: string;
+  pharmacyName: string;
+  nftToken: string;
+  latestTxHash?: string;
+}
+
+export interface CartDto {
+  id: string;
+  total_price: string;
+  total_items: number;
+  items: Array<{
+    id: string;
+    medicine_name: string;
+    quantity: number;
+    price_per_unit: string;
+    subtotal: string;
+    pharmacy_name: string;
+    pharmacy_id: string;
+  }>;
+}
+
 export interface ReceiveBatchPayload {
   batch_id: string;
   wallet_address: string;
@@ -189,6 +219,28 @@ export const listMarketplaceDrugsAPI = async () => {
   }
 };
 
+/** Alias for the new Shop Page */
+export const getShopInventory = async (): Promise<ShopMedicineItem[]> => {
+  const data = await listMarketplaceDrugsAPI();
+  if (data.success && data.drugs) {
+    return data.drugs.map((d: any) => ({
+      inventoryId: d.id,
+      medicineName: d.medicine_name,
+      composition: d.batch_details.composition,
+      manufacturer: d.batch_details.manufacturer_name,
+      manufactureDate: d.batch_details.manufactured_date,
+      expiryDate: d.batch_details.expiry_date,
+      quantityAvailable: d.quantity_available,
+      pricePerUnit: parseFloat(d.price_per_unit),
+      batchId: d.batch_id,
+      pharmacyName: d.pharmacy_name,
+      nftToken: d.batch_details.qr_code || "N/A",
+      latestTxHash: d.latest_tx_hash || "N/A",
+    }));
+  }
+  return [];
+};
+
 export const addToCartAPI = async (
   userId: number,
   inventoryId: string,
@@ -206,11 +258,35 @@ export const addToCartAPI = async (
   }
 };
 
+/** Alias for the new Shop Page */
+export const addItemToPatientCart = async (
+  userId: string,
+  inventoryId: string,
+  quantity: number = 1,
+) => {
+  return addToCartAPI(parseInt(userId), inventoryId, quantity);
+};
+
 export const getCartAPI = async (userId: number) => {
   try {
     const response = await api.get("/cart/", {
       params: { user_id: userId },
     });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/** Alias for the new Shop Page */
+export const getPatientCart = async (userId: string): Promise<CartDto> => {
+  const data = await getCartAPI(parseInt(userId));
+  return data.cart;
+};
+
+export const removeItemFromPatientCart = async (itemId: string) => {
+  try {
+    const response = await api.delete(`/cart/remove/${itemId}/`);
     return response.data;
   } catch (error) {
     throw error;

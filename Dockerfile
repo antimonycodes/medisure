@@ -1,20 +1,22 @@
-FROM node:18-alpine AS builder
+FROM node:18-alpine
+
 WORKDIR /app
+
+# Install dependencies
 COPY package*.json ./
 RUN npm install
+
+# Copy all source files
 COPY . .
-# We pass the API URL at build time so Next.js can bake it into the static pages.
+
+# Pass the API URL
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+# Build the app inside the same stage it will run in
 RUN npm run build
 
-FROM node:18-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV production
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-
 EXPOSE 3000
+
+# Start the app
 CMD ["npm", "start"]
