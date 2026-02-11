@@ -141,7 +141,7 @@ export const transferBatchAPI = async (data: TransferBatchPayload) => {
   console.log(" Payload:", JSON.stringify(data, null, 2));
 
   try {
-    const response = await api.post("/transfer/", data);
+    const response = await api.post("transfer/", data);
     console.log("SUCCESS! Response:", response.data);
     return response.data;
   } catch (error: any) {
@@ -158,7 +158,7 @@ export const mintBatchAPI = async (data: MintBatchPayload) => {
 
   try {
     console.log(" Making POST request...");
-    const response = await api.post("/mint/", data);
+    const response = await api.post("mint/", data);
     console.log("SUCCESS! Response:", response.data);
     return response.data;
   } catch (error: any) {
@@ -176,7 +176,7 @@ export const getDashboardStats = async (manufacturerId: string) => {
 
   try {
     const response = await api.get<DashboardStats>(
-      `/dashboard/?manufacturer_id=${manufacturerId}`,
+      `dashboard/?manufacturer_id=${manufacturerId}`,
     );
     console.log("Dashboard stats received:", response.data);
     return response.data;
@@ -193,7 +193,7 @@ export const getPharmacyDashboardStats = async (
   walletAddress: string,
 ): Promise<PharmacyDashboardStats> => {
   try {
-    const response = await api.get("/pharmacy/dashboard/", {
+    const response = await api.get("pharmacy/dashboard/", {
       params: { wallet_address: walletAddress },
     });
     return response.data;
@@ -204,7 +204,7 @@ export const getPharmacyDashboardStats = async (
 
 export const receiveBatchAPI = async (data: ReceiveBatchPayload) => {
   try {
-    const response = await api.post("/pharmacy/receive/", data);
+    const response = await api.post("pharmacy/receive/", data);
     return response.data;
   } catch (error) {
     throw error;
@@ -213,7 +213,7 @@ export const receiveBatchAPI = async (data: ReceiveBatchPayload) => {
 
 export const listMarketplaceDrugsAPI = async () => {
   try {
-    const response = await api.get("/marketplace/");
+    const response = await api.get("marketplace/");
     return response.data;
   } catch (error) {
     throw error;
@@ -248,7 +248,7 @@ export const addToCartAPI = async (
   quantity: number = 1,
 ) => {
   try {
-    const response = await api.post("/cart/add/", {
+    const response = await api.post("cart/add/", {
       user_id: userId,
       inventory_id: inventoryId,
       quantity: quantity,
@@ -270,7 +270,7 @@ export const addItemToPatientCart = async (
 
 export const getCartAPI = async (userId: number) => {
   try {
-    const response = await api.get("/cart/", {
+    const response = await api.get("cart/", {
       params: { user_id: userId },
     });
     return response.data;
@@ -287,7 +287,7 @@ export const getPatientCart = async (userId: string): Promise<CartDto> => {
 
 export const removeItemFromPatientCart = async (itemId: string) => {
   try {
-    const response = await api.delete(`/cart/remove/${itemId}/`);
+    const response = await api.delete(`cart/remove/${itemId}/`);
     return response.data;
   } catch (error) {
     throw error;
@@ -296,7 +296,7 @@ export const removeItemFromPatientCart = async (itemId: string) => {
 
 export const createOrderAPI = async (userId: number, pharmacyId: string) => {
   try {
-    const response = await api.post("/orders/create/", {
+    const response = await api.post("orders/create/", {
       user_id: userId,
       pharmacy_id: pharmacyId,
     });
@@ -308,7 +308,7 @@ export const createOrderAPI = async (userId: number, pharmacyId: string) => {
 
 export const signinAPI = async (data: any) => {
   try {
-    const response = await api.post("/auth/signin/", data);
+    const response = await api.post("auth/signin/", data);
     return response.data;
   } catch (error) {
     throw error;
@@ -317,7 +317,7 @@ export const signinAPI = async (data: any) => {
 
 export const signupAPI = async (data: any) => {
   try {
-    const response = await api.post("/auth/signup/", data);
+    const response = await api.post("auth/signup/", data);
     return response.data;
   } catch (error) {
     throw error;
