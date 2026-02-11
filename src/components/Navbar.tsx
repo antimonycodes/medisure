@@ -31,7 +31,7 @@ const Navbar = () => {
     { name: "How it works", link: "/#how-it-works" },
     { name: "About us", link: "/about" },
     { name: "Login", link: "/signin" },
-    { name: "Shop Now", link: "/patient/dashboard", isButton: true },
+    { name: "Shop Now", link: "/shop", isButton: true },
   ];
 
   const NavLink = ({
@@ -124,9 +124,9 @@ const Navbar = () => {
                 className="p-2 text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-colors duration-200 relative"
               >
                 <ShoppingCart className="w-6 h-6" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                {/* <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                   2
-                </span>
+                </span> */}
               </Link>
               <button
                 onClick={() => setIsOpen(!isOpen)}
