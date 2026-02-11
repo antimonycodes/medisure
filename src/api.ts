@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BASE_URL;
 
 console.log("🌐 API Module Loaded - Base URL:", API_BASE_URL);
 
@@ -299,6 +300,24 @@ export const createOrderAPI = async (userId: number, pharmacyId: string) => {
       user_id: userId,
       pharmacy_id: pharmacyId,
     });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const signinAPI = async (data: any) => {
+  try {
+    const response = await api.post("/auth/signin/", data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const signupAPI = async (data: any) => {
+  try {
+    const response = await api.post("/auth/signup/", data);
     return response.data;
   } catch (error) {
     throw error;

@@ -9,7 +9,7 @@ const APIDebugger = () => {
     test: string,
     status: "success" | "error" | "warning",
     message: string,
-    data?: any
+    data?: any,
   ) => {
     setResults((prev) => [
       ...prev,
@@ -22,21 +22,25 @@ const APIDebugger = () => {
     setResults([]);
 
     // Test 1: Check environment variable
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BASE_URL;
     addResult(
       "Environment Variable",
-      process.env.NEXT_PUBLIC_BASE_URL ? "success" : "error",
-      process.env.NEXT_PUBLIC_BASE_URL || "NOT SET",
-      { value: process.env.NEXT_PUBLIC_BASE_URL }
+      apiUrl ? "success" : "error",
+      apiUrl || "NOT SET",
+      {
+        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+        NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+      },
     );
 
     // Test 2: Check if backend is reachable
     try {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:8000/api";
+      const baseUrl = apiUrl || "http://localhost:8000/api";
       addResult(
         "Testing Backend",
         "warning",
-        `Attempting to reach: ${baseUrl}`
+        `Attempting to reach: ${baseUrl}`,
       );
 
       const response = await fetch(`${baseUrl}/health`, {
@@ -53,7 +57,7 @@ const APIDebugger = () => {
         addResult(
           "Health Check",
           "error",
-          `HTTP ${response.status}: ${response.statusText}`
+          `HTTP ${response.status}: ${response.statusText}`,
         );
       }
     } catch (error: any) {
@@ -64,14 +68,13 @@ const APIDebugger = () => {
         {
           errorType: error.name,
           message: error.message,
-        }
+        },
       );
     }
 
     // Test 3: Try to reach /mint/ endpoint
     try {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:8000/api";
+      const baseUrl = apiUrl || "http://localhost:8000/api";
       const testPayload = {
         batch_id: "TEST-" + Date.now(),
         medicine_name: "Test Medicine",
@@ -88,7 +91,7 @@ const APIDebugger = () => {
         "Testing Mint Endpoint",
         "warning",
         "Sending test payload...",
-        testPayload
+        testPayload,
       );
 
       const response = await fetch(`${baseUrl}/mint/`, {
@@ -106,14 +109,14 @@ const APIDebugger = () => {
           "Mint Endpoint",
           "success",
           "Endpoint responded successfully!",
-          responseData
+          responseData,
         );
       } else {
         addResult(
           "Mint Endpoint",
           "error",
           `HTTP ${response.status}: ${response.statusText}`,
-          responseData
+          responseData,
         );
       }
     } catch (error: any) {
@@ -124,7 +127,7 @@ const APIDebugger = () => {
         {
           errorType: error.name,
           message: error.message,
-        }
+        },
       );
     }
 
@@ -132,7 +135,7 @@ const APIDebugger = () => {
     addResult(
       "CORS Check",
       "warning",
-      "If you see CORS errors in console, backend needs CORS configuration"
+      "If you see CORS errors in console, backend needs CORS configuration",
     );
 
     setTesting(false);
@@ -198,7 +201,7 @@ const APIDebugger = () => {
                 <div
                   key={index}
                   className={`border-2 rounded-lg p-4 ${getBackgroundColor(
-                    result.status
+                    result.status,
                   )}`}
                 >
                   <div className="flex items-start">
@@ -240,7 +243,7 @@ const APIDebugger = () => {
               <li>
                 • Check if{" "}
                 <code className="bg-gray-200 px-2 py-1 rounded">
-                  NEXT_PUBLIC_BASE_URL
+                  NEXT_PUBLIC_API_URL
                 </code>{" "}
                 is set in your .env file
               </li>

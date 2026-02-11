@@ -2,11 +2,11 @@ import VerificationIcon from "@/shared/VerificationIcon";
 import bg from "../../public/signin-banner.jpg";
 import { useState } from "react";
 import Image from "next/image";
-import axios from "axios";
-import { toast } from "react-toastify";
 import Link from "next/link";
 import { useRedirectIfAuth } from "@/hooks/useRedirectIfAuth";
 import { useAuth } from "@/hooks/useAuth";
+import { signinAPI } from "@/api";
+import { toast } from "react-toastify";
 
 const SignIn = () => {
   const [username, setUsername] = useState("");
@@ -22,13 +22,10 @@ const SignIn = () => {
     setLoading(true);
 
     try {
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/auth/signin/`,
-        {
-          username,
-          password,
-        },
-      );
+      const data = await signinAPI({
+        username,
+        password,
+      });
 
       const {
         token,
@@ -37,7 +34,7 @@ const SignIn = () => {
         role,
         entity_id,
         name,
-      } = res.data;
+      } = data;
       login(token, user_id, userUsername, role, entity_id, name);
       toast.success("Login successful!");
     } catch (err: any) {
